@@ -12,10 +12,19 @@
 
 #pragma once
 
-#include <string>
+#include <map>
 #include <netinet/in.h>
-#include <poll.h>
-#include <main.h>
+#include <main.hpp>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <iostream>
+#include <Client.hpp>
+#include <Channel.hpp>
+#include <CommandHandler.hpp>
+#include <cstring>
+#include <string>
 
 #define MAX_CLIENTS 100
 #define BUFFER_SIZE 1024
@@ -23,20 +32,24 @@
 class Server
 {
 	private:
-		int					_server_fd;
-		std::string			_password;
-		struct sockaddr_in	_server_addr;
-		struct pollfd		_fds[MAX_CLIENTS];
-		std::vector<Client*> _clients;
+		int							_server_fd;
+		std::string					_password;
+		struct sockaddr_in			_server_addr;
+		fd_set						_read_fds, _temp_fds;
+		std::map<int, std::string> _client_buffers;
+		std::map<int, Client*> 		_clients;
+		
 
 	public:
 		Server(int port, const std::string &passw);
 		~Server();
 		void run();
-		void handleClient(int i); // We will modify this
-
-	private: 
 		void acceptConnection();
 		void handleClient(int i);
-		void parseCommand(Client *client, const std::string &command);
+		void clientDisconected(int i);
+		void clientHandleMessage(int i, char *buff, int bytes_read);
+
+		std::string	getPassword(void)	const;
+		Client*		findClient(const std::string& clientName);
+		Channel*	findChannel(const std::string& channelName);
 };
