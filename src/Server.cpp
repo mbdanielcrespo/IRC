@@ -69,7 +69,6 @@ void Server::run()
 		// Mais eficiente se procurar o _server_fd mais alto ate agora e fizer loop so ate ai***
 		if (select(FD_SETSIZE + 1, &_temp_fds, NULL, NULL, NULL) < 0)
 			throw std::runtime_error("Select failed");
-
 		for (int i = 0; i < FD_SETSIZE; i++)
 		{
 			if (FD_ISSET(i, &_temp_fds))
@@ -134,7 +133,7 @@ void	Server::clientHandleMessage(int clinet_sock, char *buff, int bytes_read)
 {
 	buff[bytes_read] = '\0';
 
-	Client* client = _clients[clinet_sock];    
+	Client* client = _clients[clinet_sock];
 	CommandHandler::processCommand(this, client, std::string(buff));
 }
 

@@ -6,8 +6,9 @@ Client::Client(int socket_fd) :
 	_hostname(""),
 	_realname(""),
 	_socketFd(socket_fd),
+	_hasNickname(false),
+	_hasUsername(false),
 	_isAuthenticated(false),
-	_isRegistered(false),
 	_isOperator(false),
 	_connectionTime(time(NULL)) {
 	if (_socketFd < 0) {
@@ -22,7 +23,7 @@ Client::~Client()
 
 bool Client::authenticate(const std::string& password, const std::string& srv_pass)
 {
-	if (!password.empty() && (password == srv_pass))
+	if (!password.empty() && (password == srv_pass) && _hasNickname && _hasUsername)
 	{
 		_isAuthenticated = true;
 		return true;
@@ -35,9 +36,8 @@ void Client::setNickname(const std::string& nickname)
 	if (!nickname.empty())
 	{
 		_nickname = nickname;
-		
-		if (!_username.empty())
-			_isRegistered = true;
+		_hasNickname = true;
+		PRINT_COLOR(CYAN, "NICK successfully set to: " << nickname) << "!";
 	}
 }
 
@@ -47,15 +47,9 @@ void Client::setUsername(const std::string& username, const std::string& realnam
 	{
 		_username = username;
 		_realname = realname;
-		
-		if (!_nickname.empty())
-			_isRegistered = true;
+		_hasUsername = true;
+		PRINT_COLOR(CYAN, "USER successfully set to: " << username) << "!";
 	}
-}
-
-bool Client::isRegistered() const
-{
-	return _isRegistered;
 }
 
 void Client::joinChannel(Channel* channel)
@@ -77,11 +71,6 @@ void Client::leaveChannel(const std::string& channel_name)
 		// Access channel and remove clinet
 		_joinedChannels.erase(it);
 	}
-}
-
-bool Client::isInChannel(const std::string& channel_name) const
-{
-	return _joinedChannels.find(channel_name) != _joinedChannels.end();
 }
 
 void Client::setChannelOperatorStatus(const std::string& channel_name, bool is_op)
@@ -110,7 +99,6 @@ void Client::sendPrivateMessage(Client* recipient, const std::string& message) {
 	}
 }
 
-// Getters
 std::string Client::getNickname() const
 {
 	return _nickname; 
@@ -134,4 +122,14 @@ bool Client::isOperator() const
 std::string Client::getPrefix() const
 {
 	return _nickname + "!" + _username + "@" + _hostname;
+}
+
+bool Client::isInChannel(const std::string& channel_name) const
+{
+	return _joinedChannels.find(channel_name) != _joinedChannels.end();
+}
+
+bool Client::isAuthenticated() const
+{
+	return _isAuthenticated;
 }

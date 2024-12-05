@@ -17,6 +17,42 @@ std::vector<std::string> CommandHandler::splitCommand(const std::string& raw_com
 	return parts;
 }
 
+bool CommandHandler::processAuth(Server* server, Client* client, const std::string& raw_command)
+{
+	if (!server || !client || raw_command.empty())
+		return (0);
+
+	std::vector<std::string> parts = splitCommand(raw_command);
+	if (parts.empty())
+		return (0);
+
+	std::string command = parts[0];
+	std::transform(command.begin(), command.end(), command.begin(), ::toupper);
+	std::vector<std::string> params(parts.begin() + 1, parts.end());
+
+	typedef void (*HandlerFunction)(Server*, Client*, const std::vector<std::string>&);
+	std::vector<std::string> commands;
+	commands.push_back("PASS");
+	commands.push_back("NICK");
+	commands.push_back("USER");
+
+	std::vector<HandlerFunction> handlers;
+	handlers.push_back(handlePass);
+	handlers.push_back(handleNick);
+	handlers.push_back(handleUser);
+
+	for (size_t i = 0; i < commands.size(); i++)
+	{
+		if (raw_command == commands[i])
+		{
+			PRINT_COLOR(GREEN, "Command ran: \"" << raw_command << "\" not found!");
+			handlers[i](server, client, params);	
+		}
+	}
+	PRINT_COLOR(RED, "ERROR: command \"" << raw_command << "\" not found!");
+	return (1);
+}
+
 void CommandHandler::processCommand(Server* server, Client* client, const std::string& raw_command)
 {
 	if (!server || !client || raw_command.empty())
@@ -27,67 +63,61 @@ void CommandHandler::processCommand(Server* server, Client* client, const std::s
 		return;
 
 	std::string command = parts[0];
-	//	std::transform(command.begin(), command.end(), command.begin(), ::toupper);
-	//	Case sensitive?
+	std::transform(command.begin(), command.end(), command.begin(), ::toupper);
 	std::vector<std::string> params(parts.begin() + 1, parts.end());
 
 	typedef void (*HandlerFunction)(Server*, Client*, const std::vector<std::string>&);
 	std::vector<std::string> commands;
-    commands.push_back("PASS");
-    commands.push_back("NICK");
-    commands.push_back("USER");
-    commands.push_back("JOIN");
-    commands.push_back("PRIVMSG");
-    commands.push_back("PART");
-    commands.push_back("QUIT");
-    commands.push_back("KICK");
-    commands.push_back("INVITE");
-    commands.push_back("TOPIC");
-    commands.push_back("MODE");
+	commands.push_back("JOIN");
+	commands.push_back("PRIVMSG");
+	commands.push_back("PART");
+	commands.push_back("QUIT");
+	commands.push_back("KICK");
+	commands.push_back("INVITE");
+	commands.push_back("TOPIC");
+	commands.push_back("MODE");
 
-    std::vector<HandlerFunction> handlers;
-    handlers.push_back(handlePass);
-    handlers.push_back(handleNick);
-    handlers.push_back(handleUser);
-    handlers.push_back(handleJoin);
-    handlers.push_back(handlePrivMsg);
-    handlers.push_back(handlePart);
-    handlers.push_back(handleQuit);
-    handlers.push_back(handleKick);
-    handlers.push_back(handleInvite);
-    handlers.push_back(handleTopic);
-    handlers.push_back(handleMode);
+	std::vector<HandlerFunction> handlers;
+	handlers.push_back(handleJoin);
+	handlers.push_back(handlePrivMsg);
+	handlers.push_back(handlePart);
+	handlers.push_back(handleQuit);
+	handlers.push_back(handleKick);
+	handlers.push_back(handleInvite);
+	handlers.push_back(handleTopic);
+	handlers.push_back(handleMode);
 
 	//Handle unknown commands
-    std::string error = "Unknown command: " + command;
+	std::string error = "Unknown command: " + command;
 }
 
 void CommandHandler::handlePass(Server* server, Client* client, const std::vector<std::string>& params) 
 {
 	if (params.size() < 1)
 	{
-		client->sendMessage("Error: PASS requires a password");
+		client->sendMessage("Error: PASS requires a password as parameter");
 		return;
 	}
 	else if (!client->authenticate(params[0], server->getPassword()))
-		client->sendMessage("Error: Authentication failed");
+		client->sendMessage("Error: Authentication failed, you must have a valid NICKname and USERname before setting password");
 }
 
 void CommandHandler::handleNick(Server* server, Client* client, const std::vector<std::string>& params)
 {
+	(void)server;
 	if (params.size() < 1)
 	{
-		client->sendMessage("Error: NICK requires a nickname");
+		client->sendMessage("Error: NICK requires a nickname as parameter");
 		return;
 	}
 
 	std::string nickname = params[0];
 	// Check nickname validity (length, allowed characters)
-	if (nickname.length() > 30 || nickname.empty()) {
+	if (nickname.length() > 60 || nickname.empty())
+	{
 		client->sendMessage("Error: Invalid nickname");
 		return;
 	}
-	(void)server;
 	/*
 	if (server->isNicknameInUse(nickname))
 	{
@@ -95,8 +125,6 @@ void CommandHandler::handleNick(Server* server, Client* client, const std::vecto
 		return;
 	}
 	*/
-
-
 	client->setNickname(nickname);
 }
 

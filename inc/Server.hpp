@@ -32,12 +32,13 @@
 class Server
 {
 	private:
-		int							_server_fd;
-		std::string					_password;
-		struct sockaddr_in			_server_addr;
-		fd_set						_read_fds, _temp_fds;
-		std::map<int, std::string> _client_buffers;
-		std::map<int, Client*> 		_clients;
+		int								_server_fd;
+		std::string						_password;
+		struct sockaddr_in				_server_addr;
+		fd_set							_read_fds, _temp_fds;
+		std::map<int, std::string>		_client_buffers;
+		std::map<int, Client*> 			_clients;
+		std::map<std::string, Channel*>	_channels;
 		
 
 	public:

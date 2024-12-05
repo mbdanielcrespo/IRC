@@ -8,18 +8,17 @@ class Client;
 class Channel
 {
 	private:
-		std::string     _name;
-		std::string     _topic;
+		std::string		_name;
+		std::string		_topic;
+		bool			_inviteOnly;
+		bool			_topicRestricted;
+		bool			_hasKey;
+		std::string		_key;
+		size_t			_userLimit;
 
-		bool            _inviteOnly;
-		bool            _topicRestricted;
-		bool            _hasKey;
-		std::string     _key;
-		size_t          _userLimit;
-
-		std::map<std::string, Client*> _members;
-		std::map<std::string, Client*> _operators;
-		std::vector<std::string>       _invitedUsers;
+		std::map<std::string, Client*>	_members;
+		std::map<std::string, Client*>	_operators;
+		std::vector<std::string>		_invitedUsers;
 
 	public:
 		Channel(const std::string& name);
