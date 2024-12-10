@@ -1,9 +1,3 @@
-#include <Server.hpp>
-#include <Client.hpp>
-#include <Channel.hpp>
-#include <sstream>
-#include <algorithm>
-#include <stdexcept>
 #include <CommandHandler.hpp>
 
 std::vector<std::string> CommandHandler::splitCommand(const std::string& raw_command)
@@ -17,20 +11,37 @@ std::vector<std::string> CommandHandler::splitCommand(const std::string& raw_com
 	return parts;
 }
 
-bool CommandHandler::processAuth(Server* server, Client* client, const std::string& raw_command)
+void processAutomaticAuth(Server* server, Client* client, const std::string& raw_command)
+{
+	std::vector<std::string> cmds = splitStr(raw_command, '\n');
+	//token = findAndReplace(token, " ", "_");
+	std::vector<std::string>::iterator it = cmds.begin();
+	*it++; // CAP LS 302
+	while (it != cmds.end())
+	{
+		CommandHandler::processAuth(server, client, *it);
+		it++;
+	}
+}
+
+void CommandHandler::processAuth(Server* server, Client* client, const std::string& raw_command)
 {
 	if (!server || !client || raw_command.empty())
-		return (0);
+		return;
+
+	if (raw_command.compare(0, 10, "CAP LS 302") == 0)
+	{
+		processAutomaticAuth(server, client, raw_command);
+		return;
+	}
 
 	std::vector<std::string> parts = splitCommand(raw_command);
 	if (parts.empty())
-		return (0);
-
+		return;
 	std::string command = parts[0];
 	std::transform(command.begin(), command.end(), command.begin(), ::toupper);
 	std::vector<std::string> params(parts.begin() + 1, parts.end());
-
-	typedef void (*HandlerFunction)(Server*, Client*, const std::vector<std::string>&);
+	
 	std::vector<std::string> commands;
 	commands.push_back("PASS");
 	commands.push_back("NICK");
@@ -43,14 +54,17 @@ bool CommandHandler::processAuth(Server* server, Client* client, const std::stri
 
 	for (size_t i = 0; i < commands.size(); i++)
 	{
-		if (raw_command == commands[i])
+		if (command == commands[i])
 		{
-			PRINT_COLOR(GREEN, "Command ran: \"" << raw_command << "\" not found!");
-			handlers[i](server, client, params);	
+			PRINT_COLOR(GREEN, "SUCCESS: Command ran: " << command);
+			handlers[i](server, client, params);
+			return;	
 		}
 	}
-	PRINT_COLOR(RED, "ERROR: command \"" << raw_command << "\" not found!");
-	return (1);
+	std::string err_msg = "ERROR: command \"" + raw_command + "\" not found!";
+	client->sendMessage(err_msg);
+	PRINT_COLOR(RED, err_msg);
+	return;
 }
 
 void CommandHandler::processCommand(Server* server, Client* client, const std::string& raw_command)
@@ -138,31 +152,31 @@ void CommandHandler::handleUser(Server* server, Client* client, const std::vecto
 	}
 	(void)server;
 	std::string username = params[0];
-	std::string realname = params[3]; // realname is typically the last parameter
+	//std::string realname = params[3]; // realname is typically the last parameter
 
-	client->setUsername(username, realname);
+	client->setUsername(username);
 }
 
 void CommandHandler::handleJoin(Server* server, Client* client, const std::vector<std::string>& params)
 {
-	if (params.size() < 1) {
-		client->sendMessage("Error: JOIN requires a channel name");
+	if (params.size() < 1)
+	{
+		client->sendMessage("ERROR: JOIN requires a channel name");
 		return;
 	}
 
-	//std::string channelName = params[0];
-	//Channel* channel = &Channel("pepe");
-	//Channel* channel = server->getOrCreateChannel(channelName);
-
+	std::string channelName = params[0];
+	Channel *channel = server->findChannel(channelName, client);
 	try
 	{
-		//channel->addMember(client);
-		//client->joinChannel(channel);
-		(void)server;
+		channel->addMember(client);
+		channel->addOperator(client); // As operator
+		client->joinChannel(channel);
 	}
 	catch (const std::exception& e)
 	{
-		client->sendMessage(std::string("Error: ") + e.what());
+		PRINT_COLOR(RED, "ERROR: " << e.what());
+		client->sendMessage(std::string("ERROR: ") + e.what());
 	}
 }
 
@@ -178,16 +192,35 @@ void CommandHandler::handlePrivMsg(Server* server, Client* client, const std::ve
 	std::string message = params[1];
 
 	Client* targetClient = server->findClient(recipient);
-	Channel* targetChannel = server->findChannel(recipient);
+	Channel* targetChannel = server->findChannel(recipient, NULL);
 
-	if (targetClient) {
+	if (targetClient)
 		client->sendPrivateMessage(targetClient, message);
-	} else if (targetChannel) {
+	else if (targetChannel)
 		targetChannel->broadcastMessage(client, message);
-	} else {
+	else
 		client->sendMessage("Error: Recipient not found");
-	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 void CommandHandler::handlePart(Server* server, Client* client, const std::vector<std::string>& params) {
 	if (params.size() < 1) {

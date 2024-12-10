@@ -52,5 +52,5 @@ class Server
 
 		std::string	getPassword(void)	const;
 		Client*		findClient(const std::string& clientName);
-		Channel*	findChannel(const std::string& channelName);
+		Channel*	findChannel(const std::string& channelName, Client* client);
 };

@@ -90,7 +90,7 @@ void Channel::broadcastMessage(Client* sender, const std::string& message)
 {
 	checkClient(sender); // return or throw?
 	
-	std::string fullMessage = ":" + sender->getPrefix() + " " + message;
+	std::string fullMessage = ":" + sender->getUsername() + " " + message;
 	
 	for (std::map<std::string, Client*>::iterator it = _members.begin(); it != _members.end(); ++it)
 	{
@@ -106,7 +106,7 @@ void Channel::inviteUser(Client* inviter, Client* invited)
 	checkOperator(inviter);
 	
 	_invitedUsers.push_back(invited->getNickname());
-	invited->sendMessage(":" + inviter->getPrefix() + " INVITE " + 
+	invited->sendMessage(":" + inviter->getUsername() + " INVITE " + 
 						 invited->getNickname() + " :" + _name);
 }
 

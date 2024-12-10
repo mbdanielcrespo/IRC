@@ -15,8 +15,8 @@ class Client
 	private:
 		std::string		_nickname;
 		std::string		_username;
-		std::string		_hostname;
-		std::string		_realname;
+		//std::string		_hostname;
+		//std::string		_realname;
 		int				_socketFd;
 
 		bool			_hasNickname;
@@ -31,14 +31,13 @@ class Client
 
 		std::map<std::string, Channel*>	_joinedChannels;
 
-
 	public:
 		Client(int socket_fd);
 		~Client();
 
 		bool	authenticate(const std::string& password, const std::string& srv_pass);
 		void	setNickname(const std::string& nickname);
-		void	setUsername(const std::string& username, const std::string& realname);
+		void	setUsername(const std::string& username); //, const std::string& realname);
 		bool	isAuthenticated() const;
 
 		// Channel interaction methods
@@ -58,5 +57,5 @@ class Client
 		bool		isOperator() const;
 
 		// Utility methods
-		std::string	getPrefix() const; // Returns nickname!username@hostname
+		//std::string	getPrefix() const; // Returns nickname!username@hostname
 };

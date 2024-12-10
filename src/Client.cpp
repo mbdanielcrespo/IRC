@@ -3,17 +3,17 @@
 Client::Client(int socket_fd) : 
 	_nickname(""),
 	_username(""),
-	_hostname(""),
-	_realname(""),
+	//_hostname(""),
+	//_realname(""),
 	_socketFd(socket_fd),
 	_hasNickname(false),
 	_hasUsername(false),
 	_isAuthenticated(false),
 	_isOperator(false),
-	_connectionTime(time(NULL)) {
-	if (_socketFd < 0) {
+	_connectionTime(time(NULL))
+{
+	if (_socketFd < 0)
 		throw std::invalid_argument("Invalid socket file descriptor");
-	}
 }
 
 Client::~Client()
@@ -26,8 +26,16 @@ bool Client::authenticate(const std::string& password, const std::string& srv_pa
 	if (!password.empty() && (password == srv_pass) && _hasNickname && _hasUsername)
 	{
 		_isAuthenticated = true;
+		PRINT_COLOR(CYAN, "PASS successfully validated!");
+		std::string welcomeText = "Welcome to the chat!\n";
+		/*/"""
+		Welcome to MY server, you can join a channel\nby typing #<channel_name> 
+		""";*/
+		this->sendMessage(welcomeText);
+
 		return true;
 	}
+	PRINT_COLOR(RED, "PASS incorrect or NICK/USER unset!");
 	return false;
 }
 
@@ -37,18 +45,18 @@ void Client::setNickname(const std::string& nickname)
 	{
 		_nickname = nickname;
 		_hasNickname = true;
-		PRINT_COLOR(CYAN, "NICK successfully set to: " << nickname) << "!";
+		PRINT_COLOR(CYAN, "NICK successfully set to: " << nickname << "!");
 	}
 }
 
-void Client::setUsername(const std::string& username, const std::string& realname)
+void Client::setUsername(const std::string& username) //, const std::string& realname)
 {
 	if (!username.empty())
 	{
 		_username = username;
-		_realname = realname;
+		//_realname = realname;
 		_hasUsername = true;
-		PRINT_COLOR(CYAN, "USER successfully set to: " << username) << "!";
+		PRINT_COLOR(CYAN, "USER successfully set to: " << username << "!");
 	}
 }
 
@@ -119,10 +127,12 @@ bool Client::isOperator() const
 	return _isOperator; 
 }
 
+/*
 std::string Client::getPrefix() const
 {
 	return _nickname + "!" + _username + "@" + _hostname;
 }
+*/
 
 bool Client::isInChannel(const std::string& channel_name) const
 {
