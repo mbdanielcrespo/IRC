@@ -3,7 +3,8 @@
 Client::Client(int socket_fd) : 
 	_nickname(""),
 	_username(""),
-	//_hostname(""),
+	_hostname(""),
+	_id(""),
 	//_realname(""),
 	_socketFd(socket_fd),
 	_hasNickname(false),
@@ -16,6 +17,32 @@ Client::Client(int socket_fd) :
 		throw std::invalid_argument("Invalid socket file descriptor");
 }
 
+void Client::resolveHostname(int _socketFd)
+{
+	struct sockaddr_in addr;
+	socklen_t addr_len = sizeof(addr);
+
+	if (getpeername(_socketFd, (struct sockaddr*)&addr, &addr_len) == -1)
+	{
+		PRINT_ERROR(RED, "ERROR: Failed to get host name!");
+		return;
+	}
+
+	const char* ip = inet_ntoa(addr.sin_addr);
+
+	struct hostent* host_entry = gethostbyname(ip);
+	if (host_entry && host_entry->h_name)
+	{
+		this->setHostname(host_entry->h_name);
+		PRINT_COLOR(YELLOW, "Hostname resolved to: " << _hostname);
+	}
+	else
+	{
+		this->setHostname(ip);
+		PRINT_COLOR(YELLOW, "Using IP as hostname: " << _hostname);
+	}
+}
+
 Client::~Client()
 {
 	_joinedChannels.clear();
@@ -26,17 +53,63 @@ bool Client::authenticate(const std::string& password, const std::string& srv_pa
 	if (!password.empty() && (password == srv_pass) && _hasNickname && _hasUsername)
 	{
 		_isAuthenticated = true;
+		this->resolveHostname(_socketFd);
+		this->setId();
 		PRINT_COLOR(CYAN, "PASS successfully validated!");
 		std::string welcomeText = "Welcome to the chat!\n";
-		/*/"""
-		Welcome to MY server, you can join a channel\nby typing #<channel_name> 
-		""";*/
 		this->sendMessage(welcomeText);
-
 		return true;
 	}
 	PRINT_COLOR(RED, "PASS incorrect or NICK/USER unset!");
 	return false;
+}
+
+void Client::joinChannel(Channel* channel)
+{
+	if (channel != NULL)
+	{
+		if (DEBUG == DEBUG_ON)
+			PRINT_COLOR(CYAN, "Client: " << this->getUsername() << " joined " << channel->getName());
+		channel->addMember(this),
+		_joinedChannels[channel->getName()] = channel;
+	}
+}
+
+void Client::leaveChannel(const std::string& channel_name)
+{
+	std::map<std::string, Channel*>::iterator it = _joinedChannels.find(channel_name);
+	if (it != _joinedChannels.end())
+		_joinedChannels.erase(it);
+}
+
+void Client::setChannelOperatorStatus(const std::string& channel_name, bool is_op)
+{
+	if (isInChannel(channel_name))
+		_isOperator = is_op;
+}
+
+void Client::sendMessage(const std::string& message)
+{
+	if (_socketFd >= 0 && !message.empty())
+	{
+		std::string new_mesage = message + "\r\n";
+		ssize_t bytes_sent = send(_socketFd, new_mesage.c_str(), message.length(), 0);
+		if (bytes_sent == -1)
+			PRINT_ERROR(RED, "ERROR: Sending message to client " << _socketFd << "!");
+	}
+	else
+		PRINT_ERROR(RED, "ERROR: Invalid socket or empty message!");
+}
+
+void Client::sendPrivateMessage(Client* recipient, const std::string& message)
+{
+	if (recipient != NULL && !message.empty())
+		recipient->sendMessage("Private Message recived: " + message + "\r\n");
+	else
+	{
+		if (DEBUG == DEBUG_ON)
+			PRINT_ERROR(RED, "ERROR: Something went wrong when sending private message! \r\n");
+	}
 }
 
 void Client::setNickname(const std::string& nickname)
@@ -60,52 +133,27 @@ void Client::setUsername(const std::string& username) //, const std::string& rea
 	}
 }
 
-void Client::joinChannel(Channel* channel)
+void Client::setHostname(const std::string& hostname)
 {
-	if (channel != NULL)
+	if (!hostname.empty())
 	{
-		if (DEBUG == DEBUG_ON)
-			PRINT_COLOR(CYAN, "ClientSide: " << this->getUsername() << " joined " << channel->getName());
-		channel->addMember(this),
-		_joinedChannels[channel->getName()] = channel;
+		_hostname = hostname;
+		PRINT_COLOR(CYAN, "HOSTNAME successfully set to: " << hostname << "!");
 	}
 }
 
-void Client::leaveChannel(const std::string& channel_name)
+void Client::setId()
 {
-	std::map<std::string, Channel*>::iterator it = _joinedChannels.find(channel_name);
-	if (it != _joinedChannels.end())
+	if (_username != "" && _hostname != "" && _nickname != "")
 	{
-		// Access channel and remove clinet
-		_joinedChannels.erase(it);
+		_id = _nickname + "!" + _username + "@" + _hostname;
+		PRINT_COLOR(CYAN, "ID succsessfully set to: " << _id << "!");
 	}
+	else
+		PRINT_COLOR(YELLOW, "Unable to set id! ... USER: " + _username + " | HOST: " + _hostname + " | NICK: " + _nickname);
+
 }
 
-void Client::setChannelOperatorStatus(const std::string& channel_name, bool is_op)
-{
-	if (isInChannel(channel_name))
-		_isOperator = is_op;
-}
-
-void Client::sendMessage(const std::string& message)
-{
-	if (_socketFd >= 0 && !message.empty())
-	{
-		// Actual socket send logic would be implemented here
-		// For example: 
-		// send(_socketFd, message.c_str(), message.length(), 0);
-	}
-}
-
-void Client::sendPrivateMessage(Client* recipient, const std::string& message) {
-	// Validate recipient and message
-	if (recipient != NULL && !message.empty()) {
-		// In a real IRC implementation, this would:
-		// 1. Format the message according to IRC protocol
-		// 2. Use socket communication to send the message
-		recipient->sendMessage(message);
-	}
-}
 
 std::string Client::getNickname() const
 {
@@ -122,17 +170,20 @@ int Client::getSocketFd() const
 	return _socketFd; 
 }
 
+std::map<std::string, Channel*> Client::getJoinedChannels() const
+{
+    return _joinedChannels;
+}
+
 bool Client::isOperator() const
 {
 	return _isOperator; 
 }
 
-/*
-std::string Client::getPrefix() const
+std::string Client::getId() const
 {
-	return _nickname + "!" + _username + "@" + _hostname;
+	return _id;
 }
-*/
 
 bool Client::isInChannel(const std::string& channel_name) const
 {

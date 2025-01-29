@@ -1,6 +1,10 @@
 #pragma once
 #include <main.hpp>
 #include <Channel.hpp>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
 #include <string>
 #include <vector>
 #include <map>
@@ -15,7 +19,8 @@ class Client
 	private:
 		std::string		_nickname;
 		std::string		_username;
-		//std::string		_hostname;
+		std::string		_hostname;
+		std::string		_id;
 		//std::string		_realname;
 		int				_socketFd;
 
@@ -38,6 +43,8 @@ class Client
 		bool	authenticate(const std::string& password, const std::string& srv_pass);
 		void	setNickname(const std::string& nickname);
 		void	setUsername(const std::string& username); //, const std::string& realname);
+		void	setHostname(const std::string& hostname);
+		void	setId();
 		bool	isAuthenticated() const;
 
 		// Channel interaction methods
@@ -53,9 +60,14 @@ class Client
 		// Getters
 		std::string	getNickname() const;
 		std::string	getUsername() const;
+		//std::string	getHostname() const;
+		std::string getId() const;
+		std::map<std::string, Channel*> getJoinedChannels() const;
+
 		int			getSocketFd() const;
 		bool		isOperator() const;
 
-		// Utility methods
-		//std::string	getPrefix() const; // Returns nickname!username@hostname
+		void		resolveHostname(int _socketFd);
+
+		// Utility method
 };

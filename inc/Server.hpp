@@ -46,11 +46,12 @@ class Server
 		~Server();
 		void run();
 		void acceptConnection();
-		void handleClient(int i);
-		void clientDisconected(int i);
-		void clientHandleMessage(int i, char *buff, int bytes_read);
+		void handleClient(int client_sock);
+		void clientDisconected(int client_sock);
+		void clientHandleMessage(int client_sock, char *buff, int bytes_read);
 
 		std::string	getPassword(void)	const;
 		Client*		findClient(const std::string& clientName);
+		void		removeClient(int clientFd);
 		Channel*	findChannel(const std::string& channelName, Client* client);
 };

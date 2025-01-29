@@ -17,6 +17,7 @@
 # define B_WHITE        "\033[1m\033[37m"
 
 # define PRINT_COLOR(color, text) (std::cout << color << text << RESET << std::endl)
+/// PRINT_COLOR_DEBUG()
 # define PRINT_ERROR(color, text) (std::cerr << color << text << RESET << std::endl)
 
 # define DEBUG          1

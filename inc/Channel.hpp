@@ -49,4 +49,7 @@ class Channel
 
 		void 		checkOperator(Client* client);
 		void 		checkClient(Client* client);
+
+		std::string listMembers() const;
+		std::string listOperators() const;
 };

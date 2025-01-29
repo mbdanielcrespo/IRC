@@ -58,7 +58,6 @@ Server::~Server()
 
 void Server::run()
 {
-
 	FD_ZERO(&_read_fds);			// Init sockets
 	FD_SET(_server_fd, &_read_fds);
 
@@ -97,39 +96,40 @@ void Server::acceptConnection()
 		Client* newClient = new Client(new_client_sock);
 		_clients[new_client_sock] = newClient;
 		
-		if (DEBUG == DEBUG_ON)
+		if (DEBUG == DEBUG_ON)	
 			PRINT_COLOR(GREEN, "Client connected successfully: " << new_client_sock);
+
+		//// WHY FD_SET twice?
 
 		FD_SET(new_client_sock, &_read_fds);
 		std::string welcome = "Please provide connection password using PASS command\r\n";
 		send(new_client_sock, welcome.c_str(), welcome.length(), 0);
 	}
-
 	else
 		throw std::runtime_error("Failed to create socket");
 }
 
-void	Server::handleClient(int clinet_sock)
+void Server::handleClient(int client_sock)
 {
 	char buff[BUFFER_SIZE];
-	int bytes_read = recv(clinet_sock, buff, sizeof(buff) - 1, 0);
-
+	int bytes_read = recv(client_sock, buff, sizeof(buff) - 1, 0);
+	
 	if (bytes_read <= 0)
-		clientDisconected(clinet_sock);
+		clientDisconected(client_sock);
 	else
-		clientHandleMessage(clinet_sock, buff, bytes_read);
+		clientHandleMessage(client_sock, buff, bytes_read);
 }
 
-void	Server::clientDisconected(int i)
+void Server::clientDisconected(int client_sock)
 {
 	if (DEBUG == DEBUG_ON)
-		PRINT_COLOR(YELLOW, "Client disconnected: " << i);
-	close(i);
-	FD_CLR(i, &_read_fds);
-	_client_buffers.erase(i);
+		PRINT_COLOR(YELLOW, "Client disconnected: " << client_sock);
+	close(client_sock);
+	FD_CLR(client_sock, &_read_fds);
+	_client_buffers.erase(client_sock);
 }
 
-void	Server::clientHandleMessage(int client_sock, char *buff, int bytes_read)
+void Server::clientHandleMessage(int client_sock, char *buff, int bytes_read)
 {
 	buff[bytes_read] = '\0';
 
@@ -145,39 +145,74 @@ std::string	Server::getPassword(void)	const
 	return _password;
 }
 
-Client*		Server::findClient(const std::string& clientName)
+Client*	Server::findClient(const std::string& clientName)
 {
-	PRINT_COLOR(YELLOW, "Finding client: " << clientName);
+	//if (DEBUG == DEBUG_ON)
+	//	PRINT_COLOR(YELLOW, "Finding client: " << clientName);
 	std::map<int, Client*>::iterator it = this->_clients.begin();
 	while (it != _clients.end())
 	{
-		if (it->second->getUsername() == clientName)
+		if (it->second->getNickname() == clientName)
 		{
-			PRINT_COLOR(CYAN, "Client " << clientName << " found!");
+			//PRINT_COLOR(CYAN, "Client " << clientName << " found!");
 			return it->second;
 		}
 		it++;
 	}
-	PRINT_COLOR(RED, "No Client named" << clientName << " was found!");
+	PRINT_COLOR(YELLOW, "No Client named" << clientName << " was found!");
 	return NULL;
 }
 
-Channel*	Server::findChannel(const std::string& channelName, Client* client)
+void Server::removeClient(int clientFd)
 {
-	PRINT_COLOR(YELLOW, "Finding channel: " << channelName);
+	std::map<int, Client*>::iterator it = _clients.find(clientFd);
+
+	if (it != _clients.end())
+	{
+		Client* client = it->second;
+
+		close(client->getSocketFd());
+
+		delete client;
+
+		_clients.erase(it);
+		if (DEBUG == DEBUG_ON)
+			PRINT_COLOR(GREEN, "Client removed from server: FD " << clientFd);
+	}
+}
+
+Channel* Server::findChannel(const std::string& channelName, Client* client)
+{
+	if (channelName.empty() || channelName[0] != '#')
+	{
+		PRINT_COLOR(RED, "Invalid channel name: " << channelName);
+		if (client)
+		{
+			std::string error_msg = channelName + " :Illegal channel name\r\n"; // ":server 479 " + client->getNickname() + " " +
+			client->sendMessage(error_msg);
+			if (DEBUG == DEBUG_ON)
+				PRINT_ERROR(RED, "ERROR: Invalid channel name: " << channelName);
+		}
+		return NULL; // RETURN NULL IF DOESNT EXIST AND NAME INVALID
+	}
+	
 	std::map<std::string, Channel*>::iterator it = this->_channels.find(channelName);
 	if (it != _channels.end())
 	{
-		PRINT_COLOR(CYAN, "Channel " << channelName << " already exists!");
-		return it->second;
+		//if (DEBUG == DEBUG_ON)
+		//	PRINT_COLOR(CYAN, "Channel " << channelName << " already exists!");
+		return it->second; // RETURN CHANNEL IF EXISTS
 	}
 	else if (client)
 	{
 		Channel *new_channel = new Channel(channelName);
+		new_channel->addMember(client);
 		new_channel->addOperator(client);
-		PRINT_COLOR(CYAN, "Channel " << channelName << " created by " << client->getUsername() << "!");
 		this->_channels[channelName] = new_channel;
-		return new_channel;
+		
+		if (DEBUG == DEBUG_ON)
+			PRINT_COLOR(CYAN, "Server: Channel " << channelName << " created by " << client->getUsername() << "!");
+		return new_channel; // CREATE CHANNEL IF IT DOESN'T EXIST
 	}
 	return NULL;
 }

@@ -1,5 +1,7 @@
 #include <CommandHandler.hpp>
 
+
+
 std::vector<std::string> CommandHandler::splitCommand(const std::string& raw_command)
 {
 	std::vector<std::string> parts;
@@ -31,6 +33,8 @@ void CommandHandler::processAuth(Server* server, Client* client, const std::stri
 
 	if (raw_command.compare(0, 10, "CAP LS 302") == 0)
 	{
+		if (DEBUG == DEBUG_ON)
+			PRINT_COLOR(CYAN, "Command read: CAP LS 302, automatic authentication process!");
 		processAutomaticAuth(server, client, raw_command);
 		return;
 	}
@@ -61,11 +65,18 @@ void CommandHandler::processAuth(Server* server, Client* client, const std::stri
 			return;	
 		}
 	}
-	std::string err_msg = "ERROR: command \"" + raw_command + "\" not found!";
+	std::string err_msg = "ERROR: command: " + raw_command + "Not found! Avaliable commands at the moment: PASS, NICK, USER!\n";
 	client->sendMessage(err_msg);
-	PRINT_COLOR(RED, err_msg);
+	if (DEBUG == DEBUG_ON)
+		PRINT_COLOR(RED, err_msg);
 	return;
 }
+/*
+According to the IRC protocol (both IRCv2 and IRCv3), commands like PASS, NICK, and USER 
+are registration commands and are not allowed to be used after a client has successfully 
+authenticated. Once a client has completed the registration process, these commands are 
+ignored or result in an error message from the server.
+*/
 
 void CommandHandler::processCommand(Server* server, Client* client, const std::string& raw_command)
 {
@@ -101,53 +112,77 @@ void CommandHandler::processCommand(Server* server, Client* client, const std::s
 	handlers.push_back(handleTopic);
 	handlers.push_back(handleMode);
 
-	//Handle unknown commands
-	std::string error = "Unknown command: " + command;
+	for (size_t i = 0; i < commands.size(); i++)
+	{
+		if (command == commands[i])
+		{
+			PRINT_COLOR(GREEN, "SUCCESS: Command ran: " << command);
+			handlers[i](server, client, params);
+			return;	
+		}
+	}
+	std::string err_msg = "ERROR: command: " + raw_command + "Not found! \r\n";
+	client->sendMessage(err_msg);
+	if (DEBUG == DEBUG_ON)
+		PRINT_COLOR(RED, err_msg);
+	return;
 }
 
 void CommandHandler::handlePass(Server* server, Client* client, const std::vector<std::string>& params) 
 {
 	if (params.size() < 1)
 	{
-		client->sendMessage("Error: PASS requires a password as parameter");
+		client->sendMessage("ERROR: PASS requires a password as parameter\n");
+		if (DEBUG == DEBUG_ON)
+			PRINT_COLOR(RED, "ERROR: PASS requires a password as parameter");
 		return;
 	}
 	else if (!client->authenticate(params[0], server->getPassword()))
-		client->sendMessage("Error: Authentication failed, you must have a valid NICKname and USERname before setting password");
+	{
+		client->sendMessage("ERROR: Authentication failed, you must have a valid NICKname and USERname before setting password or pass is wrong\n");
+		if (DEBUG == DEBUG_ON)
+			PRINT_COLOR(RED, "ERROR: Authentication failed, you must have a valid NICKname and USERname before setting password or pass is wrong: " << server->getPassword() << "|" << params[0]);
+	}
+	else
+	{
+		client->sendMessage("Password authentication successfull! You can now send commands to this server!\n");
+		if (DEBUG == DEBUG_ON)
+			PRINT_COLOR(GREEN, "Password authentication successfull! You can now send commands to this server!");
+	}
 }
+
 
 void CommandHandler::handleNick(Server* server, Client* client, const std::vector<std::string>& params)
 {
 	(void)server;
 	if (params.size() < 1)
 	{
-		client->sendMessage("Error: NICK requires a nickname as parameter");
+		client->sendMessage(":server 431 * :No nickname given\r\n");
 		return;
 	}
 
 	std::string nickname = params[0];
-	// Check nickname validity (length, allowed characters)
 	if (nickname.length() > 60 || nickname.empty())
 	{
-		client->sendMessage("Error: Invalid nickname");
+		client->sendMessage("ERROR: Invalid nickname");
 		return;
 	}
 	/*
 	if (server->isNicknameInUse(nickname))
 	{
-		client->sendMessage("Error: Nickname already in use");
+		client->sendMessage("ERROR: Nickname already in use");
 		return;
 	}
 	*/
 	client->setNickname(nickname);
 }
 
+
 void CommandHandler::handleUser(Server* server, Client* client, const std::vector<std::string>& params)
 {
 	if (params.size() < 4)
 	{
-		client->sendMessage("Error: USER requires username, hostname, servername, and realname");
-		//check if theyre not empty
+		client->sendMessage("ERROR: USER requires username, hostname, servername, and realname\n");
 		return;
 	}
 	(void)server;
@@ -157,21 +192,28 @@ void CommandHandler::handleUser(Server* server, Client* client, const std::vecto
 	client->setUsername(username);
 }
 
+
 void CommandHandler::handleJoin(Server* server, Client* client, const std::vector<std::string>& params)
 {
 	if (params.size() < 1)
 	{
-		client->sendMessage("ERROR: JOIN requires a channel name");
+		client->sendMessage("ERROR: JOIN requires a channel name \r\n");
 		return;
 	}
 
 	std::string channelName = params[0];
 	Channel *channel = server->findChannel(channelName, client);
+	if (!channel)
+	{
+		if (DEBUG == DEBUG_ON)
+			PRINT_ERROR(RED, "ERROR: CHANNEL was never created");
+		return;
+	}
 	try
 	{
-		channel->addMember(client);
-		channel->addOperator(client); // As operator
 		client->joinChannel(channel);
+		std::string joinMessage = ":" + client->getId() + " JOIN :" + channelName + "\r\n";
+		client->sendMessage(joinMessage);
 	}
 	catch (const std::exception& e)
 	{
@@ -184,7 +226,7 @@ void CommandHandler::handlePrivMsg(Server* server, Client* client, const std::ve
 {
 	if (params.size() < 2)
 	{
-		client->sendMessage("Error: PRIVMSG requires recipient and message");
+		client->sendMessage("ERROR: PRIVMSG requires recipient and message! \r\n");
 		return;
 	}
 
@@ -194,83 +236,105 @@ void CommandHandler::handlePrivMsg(Server* server, Client* client, const std::ve
 	Client* targetClient = server->findClient(recipient);
 	Channel* targetChannel = server->findChannel(recipient, NULL);
 
+	if (targetClient == client)
+		client->sendMessage("ERROR: Recipient cannot be yourself! \r\n");
+
+
 	if (targetClient)
 		client->sendPrivateMessage(targetClient, message);
 	else if (targetChannel)
 		targetChannel->broadcastMessage(client, message);
 	else
-		client->sendMessage("Error: Recipient not found");
+		client->sendMessage("ERROR: Recipient not found! \r\n");
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-void CommandHandler::handlePart(Server* server, Client* client, const std::vector<std::string>& params) {
-	if (params.size() < 1) {
-		client->sendMessage("Error: PART requires a channel name");
+void CommandHandler::handlePart(Server* server, Client* client, const std::vector<std::string>& params)
+{
+	if (params.size() < 1)
+	{
+		client->sendMessage("ERROR: PART requires a channel name \r\n");
 		return;
 	}
-	(void)client;
-	(void)server;
-	/*
+	
 	std::string channelName = params[0];
-	Channel* channel = server->findChannel(channelName);
+	Channel* channel = server->findChannel(channelName, NULL);
 
-	if (channel) {
-		channel->removeMember(client->getNickname());
+	if (!channel->isMember(client->getNickname()))
+	{
+		client->sendMessage("ERROR: You're not part of " + channel->getName() + " channel! \r\n");
+		if (DEBUG == DEBUG_ON)
+			PRINT_ERROR(RED, client->getNickname() + "isnt part of " + channel->getName() + " channel!");
+	}
+
+	if (channel)
+	{
 		client->leaveChannel(channelName);
-	}*/
+		channel->removeMember(client->getNickname());
+		if (DEBUG == DEBUG_ON)
+			PRINT_COLOR(BLUE, client->getNickname() + " left the channel " + channelName);
+	}
 }
 
-// QUIT command: Disconnect from server
-void CommandHandler::handleQuit(Server* server, Client* client, const std::vector<std::string>& params) {
-	std::string quitMessage = params.empty() ? "Quit" : params[0];
-	//server->removeClient(client, quitMessage);
-	(void)client;
-	(void)server;
+void CommandHandler::handleQuit(Server* server, Client* client, const std::vector<std::string>& params)
+{
+    if (!server || !client)
+		return;
+
+    std::string quitMessage = "Client " + client->getNickname() + " has quit \r\n";
+    if (!params.empty())
+        quitMessage = params[0];
+
+    PRINT_COLOR(RED, "Client " << client->getNickname() << " is quitting: " << quitMessage);
+
+    std::map<std::string, Channel*> joinedChannels = client->getJoinedChannels();
+    for (std::map<std::string, Channel*>::iterator it = joinedChannels.begin(); it != joinedChannels.end(); ++it)
+    {
+        Channel* channel = it->second;
+        if (channel)
+		{
+            channel->broadcastMessage(client, "QUIT :" + quitMessage);
+            channel->removeMember(client->getNickname());
+        }
+    }
+
+	if (DEBUG == DEBUG_ON)
+    	PRINT_COLOR(GREEN, "Client " << client->getNickname() << " successfully removed from server.");
+    server->removeClient(client->getSocketFd());
 }
 
-// KICK command: Remove user from channel
-void CommandHandler::handleKick(Server* server, Client* client, const std::vector<std::string>& params) {
-	if (params.size() < 2) {
-		client->sendMessage("Error: KICK requires channel and nickname");
+void CommandHandler::handleKick(Server* server, Client* client, const std::vector<std::string>& params)
+{
+	if (params.size() < 2)
+	{
+		client->sendMessage("ERROR: KICK requires channel and nickname!");
 		return;
 	}
 
 	std::string channelName = params[0];
 	std::string targetNickname = params[1];
-	Channel* channel = server->findChannel(channelName);
+	Channel* channel = server->findChannel(channelName, NULL);
 
-	if (channel) {
-		try {
+	if (channel)
+	{
+		try
+		{
 			channel->kick(client, targetNickname);
-		} catch (const std::exception& e) {
-			client->sendMessage(std::string("Error: ") + e.what());
+		}
+		catch (const std::exception& e)
+		{
+			client->sendMessage(std::string("ERROR: ") + e.what());
 		}
 	}
+	else
+		PRINT_ERROR(RED, "ERROR: KICK a channel!");
 }
 
-// INVITE command: Invite user to channel
-void CommandHandler::handleInvite(Server* server, Client* client, const std::vector<std::string>& params) {
-	if (params.size() < 2) {
-		client->sendMessage("Error: INVITE requires nickname and channel");
+
+void CommandHandler::handleInvite(Server* server, Client* client, const std::vector<std::string>& params)
+{
+	if (params.size() < 2)
+	{
+		client->sendMessage("ERROR: INVITE requires nickname and channel! \r\n");
 		return;
 	}
 
@@ -278,59 +342,83 @@ void CommandHandler::handleInvite(Server* server, Client* client, const std::vec
 	std::string channelName = params[1];
 	
 	Client* targetClient = server->findClient(targetNickname);
-	Channel* channel = server->findChannel(channelName);
+	Channel* channel = server->findChannel(channelName, NULL);
 
-	if (targetClient && channel) {
-		try {
+	if (client == targetClient)
+	{
+		client->sendMessage("ERROR: You cannot invite yourself! \r\n");
+		return;
+	}
+
+	if (targetClient && channel)
+	{
+		try
+		{
 			channel->inviteUser(client, targetClient);
-		} catch (const std::exception& e) {
-			client->sendMessage(std::string("Error: ") + e.what());
+			if (DEBUG == DEBUG_ON)
+				PRINT_COLOR(CYAN, "Invited " + targetClient->getNickname() + " successfully!");
+		}
+		catch (const std::exception& e)
+		{
+			client->sendMessage(std::string("ERROR: ") + e.what());
 		}
 	}
+	else
+		PRINT_ERROR(RED, "INVITE Requires a targetClient && channel!");
 }
 
 // TOPIC command: Change or view channel topic
-void CommandHandler::handleTopic(Server* server, Client* client, const std::vector<std::string>& params) {
-	if (params.size() < 1) {
-		client->sendMessage("Error: TOPIC requires channel name");
+void CommandHandler::handleTopic(Server* server, Client* client, const std::vector<std::string>& params)
+{
+	if (params.size() < 1)
+	{
+		client->sendMessage("ERROR: TOPIC requires channel name! \r\n");
 		return;
 	}
 
 	std::string channelName = params[0];
-	Channel* channel = server->findChannel(channelName);
+	Channel* channel = server->findChannel(channelName, NULL);
 
-	if (channel) {
-		if (params.size() > 1) {
+	if (channel)
+	{
+		if (params.size() > 1)
+		{
 			std::string newTopic = params[1];
-			try {
+			try
+			{
 				channel->setTopic(client, newTopic);
-			} catch (const std::exception& e) {
-				client->sendMessage(std::string("Error: ") + e.what());
 			}
-		} else {
-			// If no new topic provided, show current topic
-			client->sendMessage("Current topic for " + channelName + ": " + channel->getTopic());
+			catch (const std::exception& e)
+			{
+				client->sendMessage(std::string("ERROR: ") + e.what());
+			}
 		}
+		else
+			client->sendMessage("Current topic for " + channelName + ": " + channel->getTopic() + "\r\n");
 	}
 }
 
 // MODE command: Set channel or user modes
-void CommandHandler::handleMode(Server* server, Client* client, const std::vector<std::string>& params) {
-	if (params.size() < 2) {
-		client->sendMessage("Error: MODE requires target and mode");
+void CommandHandler::handleMode(Server* server, Client* client, const std::vector<std::string>& params)
+{
+	if (params.size() < 2)
+	{
+		client->sendMessage("ERROR: MODE requires target and mode");
 		return;
 	}
 
 	std::string target = params[0];
 	std::string modeString = params[1];
-	Channel* channel = server->findChannel(target);
+	Channel* channel = server->findChannel(target, NULL);
 
-	if (channel) {
-		// Channel mode handling
+	if (channel)
+	{
 		if (modeString == "+i") channel->setInviteOnly(true);
 		else if (modeString == "-i") channel->setInviteOnly(false);
 		else if (modeString == "+t") channel->setTopicRestricted(true);
 		else if (modeString == "-t") channel->setTopicRestricted(false);
-		// Add more mode handling as needed
 	}
+	else
+		PRINT_ERROR(RED, "ERROR: MODE requires target and mode!");
+
 }

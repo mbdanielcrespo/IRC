@@ -2,21 +2,27 @@
 #include <Client.hpp>
 #include <algorithm>
 #include <stdexcept>
+#include <sstream>
 
 Channel::Channel(const std::string& name) :
 	_name(name),
-	_topic(""),
+	_topic("EMPTY"),
 	_inviteOnly(false),
 	_topicRestricted(false),
 	_hasKey(false),
 	_key(""),
-	_userLimit(0)
+	_userLimit(0),
+
+	_members(),    
+	_operators(),
+	_invitedUsers() 
 {
-	if (name.empty())
-		throw std::invalid_argument("Channel name cannot be empty");
 	
-	if (name[0] != '#')
-		throw std::invalid_argument("Channel name must start with '#'");
+	//if (name.empty())
+	//	throw std::invalid_argument("Channel name cannot be empty");
+	
+	//if (name[0] != '#')
+	//	throw std::invalid_argument("Channel name must start with '#'");
 }
 
 Channel::~Channel()
@@ -45,16 +51,16 @@ void Channel::addMember(Client* client)
 	if (_userLimit > 0 && _members.size() >= _userLimit)
 		throw std::runtime_error("Channel user limit reached");
 	
-	if (_inviteOnly && 
-		std::find(_invitedUsers.begin(), _invitedUsers.end(), client->getNickname()) == _invitedUsers.end())
+	if (_inviteOnly && std::find(_invitedUsers.begin(), _invitedUsers.end(), client->getNickname()) == _invitedUsers.end())
 		throw std::runtime_error("Channel is invite-only");
 	
-	// In a real implementation, key verification would happen before this method
 	if (_hasKey && !_key.empty())
 		throw std::runtime_error("Channel requires a key to join");
 	
 	_members[client->getNickname()] = client;
-	broadcastMessage(client, "has joined the channel");
+	client->sendMessage(listMembers());
+	client->sendMessage(listOperators());
+	broadcastMessage(client, "has joined the channel \r\n");
 }
 
 void Channel::removeMember(const std::string& nickname)
@@ -63,7 +69,9 @@ void Channel::removeMember(const std::string& nickname)
 	
 	if (it != _members.end())
 	{
-		broadcastMessage(it->second, "has left the channel");
+		std::string PartMessage = it->second->getId() + " PART " + this->getName() + " :Leaving\r\n";
+		it->second->sendMessage(PartMessage);
+		broadcastMessage(it->second, "PART " + this->getName() + " :Leaving\r\n");
 		_members.erase(it);
 		removeOperator(nickname);
 	}
@@ -88,26 +96,34 @@ void Channel::removeOperator(const std::string& nickname)
 
 void Channel::broadcastMessage(Client* sender, const std::string& message)
 {
-	checkClient(sender); // return or throw?
-	
-	std::string fullMessage = ":" + sender->getUsername() + " " + message;
-	
+	checkClient(sender);
+
+	std::string fullMessage = ":" + sender->getId() + " PRIVMSG " + this->getName() + " " + message + "\r\n";
+
+	if (DEBUG == DEBUG_ON)
+		PRINT_COLOR(YELLOW, "Broadcasting to " << _members.size() << " members.");
+
 	for (std::map<std::string, Client*>::iterator it = _members.begin(); it != _members.end(); ++it)
 	{
-		if (it->second != sender)
-			it->second->sendMessage(fullMessage);
+		Client* recipient = it->second;
+
+		if (recipient)
+		{
+			if (recipient != sender)
+				recipient->sendMessage(fullMessage);
+		}
 	}
 }
 
 void Channel::inviteUser(Client* inviter, Client* invited)
 {
-	checkClient(invited);
+	checkClient(inviter);
 	checkClient(invited);
 	checkOperator(inviter);
 	
 	_invitedUsers.push_back(invited->getNickname());
-	invited->sendMessage(":" + inviter->getUsername() + " INVITE " + 
-						 invited->getNickname() + " :" + _name);
+	std::string joinMessage = ":" + inviter->getId() + " INVITE " + invited->getNickname() + " :" + _name + "\r\n";
+	invited->sendMessage(joinMessage);
 }
 
 void Channel::kick(Client* kicker, const std::string& nickname)
@@ -118,11 +134,9 @@ void Channel::kick(Client* kicker, const std::string& nickname)
 	std::map<std::string, Client*>::iterator it = _members.find(nickname);
 	if (it != _members.end())
 	{
-		broadcastMessage(kicker, "KICK " + nickname + " from the channel");
+		broadcastMessage(kicker, "KICK " + nickname + " from the channel \r\n");
 		removeMember(nickname);
 	}
-	//else
-	// member does not exist
 }
 
 void Channel::setTopic(Client* setter, const std::string& topic)
@@ -181,3 +195,32 @@ size_t Channel::getMemberCount() const
 {
 	return _members.size();
 }
+
+std::string Channel::listMembers() const
+{
+	std::ostringstream oss;
+	oss << getMemberCount();
+	std::string memberList = "Members in channel " + _name + " (" + oss.str() + "): \n";
+
+	for (std::map<std::string, Client*>::const_iterator it = _members.begin(); it != _members.end(); ++it)
+	{
+		memberList += "-> " + it->first + "\n";
+	}	
+
+	memberList += "\r\n";
+	return memberList;
+}
+
+std::string Channel::listOperators() const
+{
+	std::string operatorList = "Operators in channel " + _name + ": \n";
+
+	for (std::map<std::string, Client*>::const_iterator it = _operators.begin(); it != _operators.end(); ++it)
+	{
+		operatorList += "-> " + it->first + "\n";
+	}
+
+	operatorList += "\r\n";
+	return operatorList;
+}
+
