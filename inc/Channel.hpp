@@ -46,6 +46,7 @@ class Channel
 		std::string	getName() const;
 		std::string	getTopic() const;
 		size_t		getMemberCount() const;
+		bool		getHasKey() const;
 
 		void 		checkOperator(Client* client);
 		void 		checkClient(Client* client);

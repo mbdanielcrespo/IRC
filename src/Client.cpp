@@ -50,14 +50,16 @@ Client::~Client()
 
 bool Client::authenticate(const std::string& password, const std::string& srv_pass)
 {
-	if (!password.empty() && (password == srv_pass) && _hasNickname && _hasUsername)
+	if (password.empty())
+		throw(461);
+	if (password != srv_pass)
+		throw(464);
+	if (_hasNickname && _hasUsername)
 	{
 		_isAuthenticated = true;
 		this->resolveHostname(_socketFd);
 		this->setId();
-		PRINT_COLOR(CYAN, "PASS successfully validated!");
-		std::string welcomeText = "Welcome to the chat!\n";
-		this->sendMessage(welcomeText);
+		this->sendMessage("PASS successfully validated!\n");
 		return true;
 	}
 	PRINT_COLOR(RED, "PASS incorrect or NICK/USER unset!");
@@ -68,8 +70,6 @@ void Client::joinChannel(Channel* channel)
 {
 	if (channel != NULL)
 	{
-		if (DEBUG == DEBUG_ON)
-			PRINT_COLOR(CYAN, "Client: " << this->getUsername() << " joined " << channel->getName());
 		channel->addMember(this),
 		_joinedChannels[channel->getName()] = channel;
 	}
@@ -94,6 +94,7 @@ void Client::sendMessage(const std::string& message)
 	{
 		std::string new_mesage = message + "\r\n";
 		ssize_t bytes_sent = send(_socketFd, new_mesage.c_str(), message.length(), 0);
+		PRINT_COLOR(CYAN, "Message sent to client " + this->getNickname() + ": " + message);
 		if (bytes_sent == -1)
 			PRINT_ERROR(RED, "ERROR: Sending message to client " << _socketFd << "!");
 	}
@@ -122,12 +123,11 @@ void Client::setNickname(const std::string& nickname)
 	}
 }
 
-void Client::setUsername(const std::string& username) //, const std::string& realname)
+void Client::setUsername(const std::string& username)
 {
 	if (!username.empty())
 	{
 		_username = username;
-		//_realname = realname;
 		_hasUsername = true;
 		PRINT_COLOR(CYAN, "USER successfully set to: " << username << "!");
 	}
@@ -153,7 +153,6 @@ void Client::setId()
 		PRINT_COLOR(YELLOW, "Unable to set id! ... USER: " + _username + " | HOST: " + _hostname + " | NICK: " + _nickname);
 
 }
-
 
 std::string Client::getNickname() const
 {

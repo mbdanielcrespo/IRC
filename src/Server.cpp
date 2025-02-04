@@ -147,19 +147,13 @@ std::string	Server::getPassword(void)	const
 
 Client*	Server::findClient(const std::string& clientName)
 {
-	//if (DEBUG == DEBUG_ON)
-	//	PRINT_COLOR(YELLOW, "Finding client: " << clientName);
 	std::map<int, Client*>::iterator it = this->_clients.begin();
 	while (it != _clients.end())
 	{
 		if (it->second->getNickname() == clientName)
-		{
-			//PRINT_COLOR(CYAN, "Client " << clientName << " found!");
 			return it->second;
-		}
 		it++;
 	}
-	PRINT_COLOR(YELLOW, "No Client named" << clientName << " was found!");
 	return NULL;
 }
 
@@ -172,12 +166,10 @@ void Server::removeClient(int clientFd)
 		Client* client = it->second;
 
 		close(client->getSocketFd());
-
 		delete client;
-
 		_clients.erase(it);
-		if (DEBUG == DEBUG_ON)
-			PRINT_COLOR(GREEN, "Client removed from server: FD " << clientFd);
+
+		PRINT_COLOR(GREEN, "Client removed from server: FD " << clientFd);
 	}
 }
 
@@ -198,11 +190,7 @@ Channel* Server::findChannel(const std::string& channelName, Client* client)
 	
 	std::map<std::string, Channel*>::iterator it = this->_channels.find(channelName);
 	if (it != _channels.end())
-	{
-		//if (DEBUG == DEBUG_ON)
-		//	PRINT_COLOR(CYAN, "Channel " << channelName << " already exists!");
 		return it->second; // RETURN CHANNEL IF EXISTS
-	}
 	else if (client)
 	{
 		Channel *new_channel = new Channel(channelName);
@@ -210,9 +198,21 @@ Channel* Server::findChannel(const std::string& channelName, Client* client)
 		new_channel->addOperator(client);
 		this->_channels[channelName] = new_channel;
 		
-		if (DEBUG == DEBUG_ON)
-			PRINT_COLOR(CYAN, "Server: Channel " << channelName << " created by " << client->getUsername() << "!");
+		PRINT_COLOR(CYAN, "Server: Channel " << channelName << " created by " << client->getUsername() << "!");
 		return new_channel; // CREATE CHANNEL IF IT DOESN'T EXIST
 	}
 	return NULL;
+}
+
+int Server::isNicknameInUse(std::string nickname)
+{
+    for (std::map<int, Client*>::iterator it = this->_clients.begin(); it != this->_clients.end(); ++it)
+    {
+        if (it->second == NULL)
+            continue;
+
+        if (it->second->getNickname() == nickname)
+            return true;
+    }
+    return false;
 }

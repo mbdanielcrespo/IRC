@@ -69,9 +69,9 @@ void Channel::removeMember(const std::string& nickname)
 	
 	if (it != _members.end())
 	{
-		std::string PartMessage = it->second->getId() + " PART " + this->getName() + " :Leaving\r\n";
+		std::string PartMessage = ":" + it->second->getId() + " PART " + this->getName() + " :Leaving\r\n";
 		it->second->sendMessage(PartMessage);
-		broadcastMessage(it->second, "PART " + this->getName() + " :Leaving\r\n");
+		broadcastMessage(it->second, "PART " + this->getName() + " : Leaving\r\n");
 		_members.erase(it);
 		removeOperator(nickname);
 	}
@@ -82,7 +82,6 @@ void Channel::addOperator(Client* client)
 	checkClient(client);
 	if (!isMember(client->getNickname()))
 		throw std::runtime_error("Only channel members can be operators");
-	
 	_operators[client->getNickname()] = client;
 }
 
@@ -162,8 +161,19 @@ void Channel::setTopicRestricted(bool mode)
 
 void Channel::setKey(const std::string& key)
 {
+	if (!_key.empty())
+		throw(476);
 	_key = key;
-	_hasKey = !key.empty();
+	if (key.empty())
+	{
+		_hasKey = false;
+		PRINT_COLOR(BLUE, "Channel KEY Unset");
+		return;
+	}
+	_hasKey = true;
+	PRINT_COLOR(BLUE, "Channel KEY set to: " + key);
+
+
 }
 
 void Channel::setUserLimit(size_t limit)
@@ -194,6 +204,11 @@ std::string Channel::getTopic() const
 size_t Channel::getMemberCount() const
 {
 	return _members.size();
+}
+
+bool Channel::getHasKey() const
+{
+	return _hasKey;
 }
 
 std::string Channel::listMembers() const
