@@ -11,7 +11,7 @@ Channel::Channel(const std::string& name) :
 	_topicRestricted(false),
 	_hasKey(false),
 	_key(""),
-	_userLimit(0),
+	_userLimit(-1),
 
 	_members(),    
 	_operators(),
@@ -42,6 +42,11 @@ void Channel::checkOperator(Client* client)
 {
 	if (!isOperator(client->getNickname()))
 		throw std::runtime_error("Client is not a channel operator");
+}
+
+void Channel::checkUserLimit(void)
+{
+
 }
 
 void Channel::addMember(Client* client)
@@ -152,11 +157,14 @@ void Channel::setTopic(Client* setter, const std::string& topic)
 void Channel::setInviteOnly(bool mode)
 {
 	_inviteOnly = mode;
+	PRINT_COLOR(BLUE, "Channel INVITE only set to: " + mode);
+
 }
 
 void Channel::setTopicRestricted(bool mode)
 {
 	_topicRestricted = mode;
+	PRINT_COLOR(BLUE, "Channel TOPIC resctriction set to: " + mode);
 }
 
 void Channel::setKey(const std::string& key)
@@ -198,6 +206,8 @@ std::string Channel::getName() const
 
 std::string Channel::getTopic() const
 {
+	if (_topic == "")
+		return "Channel has no topic assigned!";
 	return _topic;
 }
 
@@ -238,4 +248,3 @@ std::string Channel::listOperators() const
 	operatorList += "\r\n";
 	return operatorList;
 }
-

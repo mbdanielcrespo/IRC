@@ -143,7 +143,7 @@ void CommandHandler::processCommand(Server* server, Client* client, const std::s
 	}
 }
 
-// PASS
+// DONE
 void CommandHandler::handlePass(Server* server, Client* client, const std::vector<std::string>& params) 
 {
 	if (params.size() < 1)
@@ -305,17 +305,24 @@ void CommandHandler::handleInvite(Server* server, Client* client, const std::vec
 		PRINT_ERROR(RED, "INVITE Requires a targetClient && channel!");
 }
 
-// TOPIC
+// SEMI-DONE
 void CommandHandler::handleTopic(Server* server, Client* client, const std::vector<std::string>& params)
 {
-	if (params.size() < 1)
-	{
-		client->sendMessage("ERROR: TOPIC requires channel name! \r\n");
-		return;
-	}
+	Channel		*channel;
+	std::string	topic;
+	std::string	new_topic;
 
+	if (params.size() == 0)
+		throw(401);
+	channel = server->findChannel(params[0], client);
+	if (!channel)
+		throw(403);
+	if (params.size() == 1)
+		client->sendMessage("Topic: " + topic);
+
+	// TODO FINISH TOPIC FUNCTION 
 	std::string channelName = params[0];
-	Channel* channel = server->findChannel(channelName, NULL);
+	channel = server->findChannel(channelName, NULL);
 
 	if (channel)
 	{
@@ -367,7 +374,7 @@ void CommandHandler::handlePrivMsg(Server* server, Client* client, const std::ve
 		throw(411);
 }
 
-// MODE command: Set channel or user modes
+// DONE
 void CommandHandler::handleMode(Server* server, Client* client, const std::vector<std::string>& params)
 {
 	if (params.size() < 2)
@@ -380,8 +387,9 @@ void CommandHandler::handleMode(Server* server, Client* client, const std::vecto
 
 	if (!channel)
 		throw(403);
-	if (!channel->isOperator(client->getNickname()));
+	if (!channel->isOperator(client->getNickname()))
 		throw(482);
+
 	if (modeString == "+k" && params.size() < 3) throw(476);
 	else if (modeString == "+k" && params.size() == 3) channel->setKey(params[2]);
 	else if (modeString == "-k") channel->setKey("");
@@ -389,11 +397,39 @@ void CommandHandler::handleMode(Server* server, Client* client, const std::vecto
 	else if (modeString == "-i") channel->setInviteOnly(false);
 	else if (modeString == "+t") channel->setTopicRestricted(true);
 	else if (modeString == "-t") channel->setTopicRestricted(false);
+	else if (modeString == "+l" && params.size() < 3) throw(461);
+	else if (modeString == "+l" && params.size() == 3)
+	{
+		std::istringstream iss(params[2]);
+		size_t val;
+		if (!(iss >> val))
+			throw(476);
+		channel->setUserLimit(val);
+	}
+	else if (modeString == "-l") channel->setUserLimit(-1);
+	else if (modeString == "+o" && params.size() < 3) throw(472);
+	else if (modeString == "+o" && params.size() == 3)
+	{
+		Client *new_op = server->findClient(params[2]);
+		if (new_op == NULL)
+			throw(401);
+		if (!channel->isMember(params[2]))
+			throw(441);		
+		channel->addOperator(new_op);
+	}
+	else if (modeString == "-o" && params.size() < 3) throw(472);
+	else if (modeString == "-o" && params.size() == 3)
+	{
+		Client *new_op = server->findClient(params[2]);
+		if (new_op == NULL)
+			throw(401);
+		if (!channel->isMember(params[2]))
+			throw(441);
+		channel->removeOperator(params[2]);
+	}
 	else throw(472);
 }
 
 //TODO: WHO (handle)
 //TODO: SEND SERVER CORRECT MESSAGE FOR NICK FOR BEING ABLE TO JOIN CHANNELS AFTERWARDS
 //TODO: UPDATE CHANNEL KEY PROTECTION (JOIN) 475
-//TODO: o CHANNEL OPERATOR PRIVILLEGEx\
-//TODO: l CHANNEL USER LIMIT (JOIN, INVITE)

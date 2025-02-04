@@ -50,6 +50,7 @@ class Channel
 
 		void 		checkOperator(Client* client);
 		void 		checkClient(Client* client);
+		void 		checkUserLimit(void);
 
 		std::string listMembers() const;
 		std::string listOperators() const;
