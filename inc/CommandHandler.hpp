@@ -40,4 +40,7 @@ class CommandHandler
 		static void	handleInvite(Server* server, Client* client, const std::vector<std::string>& params);
 		static void	handleTopic(Server* server, Client* client, const std::vector<std::string>& params);
 		static void	handleMode(Server* server, Client* client, const std::vector<std::string>& params);
+
+		static void	checkChannel(Channel *channel);
+
 };

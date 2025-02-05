@@ -1,6 +1,11 @@
 #include <CommandHandler.hpp>
+#include <Channel.hpp>
 
-
+void CommandHandler::checkChannel(Channel *channel)
+{
+	if (channel == NULL)
+		throw (403);
+}
 
 std::vector<std::string> CommandHandler::splitCommand(const std::string& raw_command)
 {
@@ -201,8 +206,10 @@ void CommandHandler::handleJoin(Server* server, Client* client, const std::vecto
 
 	std::string channelName = params[0];
 	Channel *channel = server->findChannel(channelName, client);
-	if (!channel)
-		throw(403);
+	checkChannel(channel);
+	channel->checkInviteOnly();
+	channel->checkUserLimit();
+	channel->checkKey(params);
 
 	client->joinChannel(channel);
 	std::string joinMessage = ":" + client->getId() + " JOIN :" + channelName + "\r\n";
@@ -218,8 +225,7 @@ void CommandHandler::handlePart(Server* server, Client* client, const std::vecto
 	std::string channelName = params[0];
 	Channel* channel = server->findChannel(channelName, NULL);
 
-	if (!channel)
-		throw(403);
+	checkChannel(channel);
 
 	if (!channel->isMember(client->getNickname()))
 		throw(442);
@@ -250,12 +256,14 @@ void CommandHandler::handleQuit(Server* server, Client* client, const std::vecto
     if (!server)
 		throw(402);
 	if (!client)
-		PRINT_ERROR(RED, handleError(401));
+		throw(401);
+
 	std::string quitMessage;
 	if (!params.empty())
 	    quitMessage = "Client " + client->getNickname() + " has quit \r\n";
 	else
 		quitMessage = "Client " + client->getNickname() + ": " + params[0] + "\r\n";
+
     std::map<std::string, Channel*> joinedChannels = client->getJoinedChannels();
     for (std::map<std::string, Channel*>::iterator it = joinedChannels.begin(); it != joinedChannels.end(); ++it)
     {
@@ -270,9 +278,9 @@ void CommandHandler::handleQuit(Server* server, Client* client, const std::vecto
     server->removeClient(client->getSocketFd());
 }
 
-// DONE
 void CommandHandler::handleInvite(Server* server, Client* client, const std::vector<std::string>& params)
 {
+	// TODO: CHECK USER LIMIT
 	if (params.size() < 2)
 		throw(461);
 
@@ -281,6 +289,9 @@ void CommandHandler::handleInvite(Server* server, Client* client, const std::vec
 	
 	Client* targetClient = server->findClient(targetNickname);
 	Channel* channel = server->findChannel(channelName, NULL);
+
+	channel->checkClient(targetClient);
+	checkChannel(channel);
 
 	if (client == targetClient)
 	{
@@ -305,7 +316,6 @@ void CommandHandler::handleInvite(Server* server, Client* client, const std::vec
 		PRINT_ERROR(RED, "INVITE Requires a targetClient && channel!");
 }
 
-// SEMI-DONE
 void CommandHandler::handleTopic(Server* server, Client* client, const std::vector<std::string>& params)
 {
 	Channel		*channel;
@@ -315,51 +325,37 @@ void CommandHandler::handleTopic(Server* server, Client* client, const std::vect
 	if (params.size() == 0)
 		throw(401);
 	channel = server->findChannel(params[0], client);
-	if (!channel)
-		throw(403);
-	if (params.size() == 1)
-		client->sendMessage("Topic: " + topic);
-
-	// TODO FINISH TOPIC FUNCTION 
-	std::string channelName = params[0];
-	channel = server->findChannel(channelName, NULL);
-
-	if (channel)
+	checkChannel(channel);
+	// TODO: SEND CORRECT MESSAGE TO CLIENT
+	if (params.size() == 1 && channel->getTopicSetter() == NULL)
+		client->sendMessage(":" + client->getId() + " 331 " + client->getNickname() + " :" + channel->getName() + " :" + channel->getTopic() + "\r\n");
+	else if (params.size() == 1)
 	{
-		if (params.size() > 1)
-		{
-			std::string newTopic = params[1];
-			try
-			{
-				channel->setTopic(client, newTopic);
-			}
-			catch (const std::exception& e)
-			{
-				client->sendMessage(std::string("ERROR: ") + e.what());
-			}
-		}
-		else
-			client->sendMessage("Current topic for " + channelName + ": " + channel->getTopic() + "\r\n");
+		client->sendMessage(":" + client->getId() + " 332 " + client->getNickname() + " :" + channel->getName() + " :" + channel->getTopic() + "\r\n");
+		client->sendMessage(":" + client->getId() + " 333 " + client->getNickname() + " :" + channel->getName() + " " + (channel->getTopicSetter())->getId() + " :1738766800" + "\r\n");
+	}
+	if (params.size() >= 2)
+	{
+		new_topic = params[1];
+		client->sendMessage(":" + client->getId() +  " TOPIC " + channel->getName() + " " + new_topic + "\r\n");
+		channel->setTopic(client, new_topic);
 	}
 }
 
-// DONE (bit slow?)
+// TODO: TEST
 void CommandHandler::handlePrivMsg(Server* server, Client* client, const std::vector<std::string>& params)
 {
 	std::string recipient;
 	std::string message;
 
-	PRINT_COLOR(GREEN, "hettt");
 	if (params.size() < 1)
-		throw(461);
-	if (params.size() < 2)	
 		throw(411);
+	if (params.size() < 2)	
+		throw(412);
 		
 	recipient = params[0];
 	message = params[1];
 	
-
-
 	Client* targetClient = server->findClient(recipient);
 	Channel* targetChannel = server->findChannel(recipient, NULL);
 
@@ -374,19 +370,17 @@ void CommandHandler::handlePrivMsg(Server* server, Client* client, const std::ve
 		throw(411);
 }
 
-// DONE
+// TODO: TEST
 void CommandHandler::handleMode(Server* server, Client* client, const std::vector<std::string>& params)
 {
 	if (params.size() < 2)
 		throw(461);
-	(void)client;
 
 	std::string target = params[0];
 	std::string modeString = params[1];
 	Channel* channel = server->findChannel(target, NULL);
 
-	if (!channel)
-		throw(403);
+	checkChannel(channel);
 	if (!channel->isOperator(client->getNickname()))
 		throw(482);
 
@@ -407,22 +401,20 @@ void CommandHandler::handleMode(Server* server, Client* client, const std::vecto
 		channel->setUserLimit(val);
 	}
 	else if (modeString == "-l") channel->setUserLimit(-1);
-	else if (modeString == "+o" && params.size() < 3) throw(472);
+	else if (modeString == "+o" && params.size() < 3) throw(476);
 	else if (modeString == "+o" && params.size() == 3)
 	{
 		Client *new_op = server->findClient(params[2]);
-		if (new_op == NULL)
-			throw(401);
+		channel->checkClient(new_op);
 		if (!channel->isMember(params[2]))
 			throw(441);		
 		channel->addOperator(new_op);
 	}
-	else if (modeString == "-o" && params.size() < 3) throw(472);
+	else if (modeString == "-o" && params.size() < 3) throw(476);
 	else if (modeString == "-o" && params.size() == 3)
 	{
 		Client *new_op = server->findClient(params[2]);
-		if (new_op == NULL)
-			throw(401);
+		channel->checkClient(new_op);
 		if (!channel->isMember(params[2]))
 			throw(441);
 		channel->removeOperator(params[2]);
@@ -432,4 +424,4 @@ void CommandHandler::handleMode(Server* server, Client* client, const std::vecto
 
 //TODO: WHO (handle)
 //TODO: SEND SERVER CORRECT MESSAGE FOR NICK FOR BEING ABLE TO JOIN CHANNELS AFTERWARDS
-//TODO: UPDATE CHANNEL KEY PROTECTION (JOIN) 475
+//TODO: TEST MODES AND ALL OTHER COMMANDS WITH MMODES	

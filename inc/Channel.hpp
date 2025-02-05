@@ -15,6 +15,7 @@ class Channel
 		bool			_hasKey;
 		std::string		_key;
 		size_t			_userLimit;
+		Client*			_topicSetter;
 
 		std::map<std::string, Client*>	_members;
 		std::map<std::string, Client*>	_operators;
@@ -36,6 +37,7 @@ class Channel
 		void		setTopicRestricted(bool mode);
 		void		setKey(const std::string& key);
 		void		setUserLimit(size_t limit);
+		void 		setTopicSetter(Client *client);
 
 		void		broadcastMessage(Client* sender, const std::string& message);
 		void		inviteUser(Client* inviter, Client* invited);
@@ -47,10 +49,14 @@ class Channel
 		std::string	getTopic() const;
 		size_t		getMemberCount() const;
 		bool		getHasKey() const;
+		int 		getMemberLimit() const;
+		Client		*getTopicSetter() const;
 
 		void 		checkOperator(Client* client);
 		void 		checkClient(Client* client);
 		void 		checkUserLimit(void);
+		void 		checkKey(const std::vector<std::string>& params);
+		void 		checkInviteOnly(void);
 
 		std::string listMembers() const;
 		std::string listOperators() const;

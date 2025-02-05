@@ -6,12 +6,13 @@
 
 Channel::Channel(const std::string& name) :
 	_name(name),
-	_topic("EMPTY"),
+	_topic(""),
 	_inviteOnly(false),
 	_topicRestricted(false),
 	_hasKey(false),
 	_key(""),
 	_userLimit(-1),
+	_topicSetter(NULL),
 
 	_members(),    
 	_operators(),
@@ -35,26 +36,43 @@ Channel::~Channel()
 void Channel::checkClient(Client* client)
 {
 	if (client == NULL)
-		throw std::invalid_argument("Invalid client!");
+		throw (401);
 }
 
 void Channel::checkOperator(Client* client)
 {
 	if (!isOperator(client->getNickname()))
-		throw std::runtime_error("Client is not a channel operator");
+		throw (482);
 }
 
 void Channel::checkUserLimit(void)
 {
+	if (this->_userLimit != static_cast<size_t>(-1))
+	{
+		if (this->getMemberCount() >= this->_userLimit)
+			throw(471);
+	}
+}
 
+void Channel::checkKey(const std::vector<std::string>& params)
+{
+	if (_hasKey && params.size() < 2)
+		throw (475);
+	if (_key != params[1])
+		throw(475);
+}
+
+void Channel::checkInviteOnly(void)
+{
+	if (_inviteOnly)
+		throw(473);
 }
 
 void Channel::addMember(Client* client)
 {
 	checkClient(client);
 	
-	if (_userLimit > 0 && _members.size() >= _userLimit)
-		throw std::runtime_error("Channel user limit reached");
+	checkUserLimit();
 	
 	if (_inviteOnly && std::find(_invitedUsers.begin(), _invitedUsers.end(), client->getNickname()) == _invitedUsers.end())
 		throw std::runtime_error("Channel is invite-only");
@@ -104,8 +122,7 @@ void Channel::broadcastMessage(Client* sender, const std::string& message)
 
 	std::string fullMessage = ":" + sender->getId() + " PRIVMSG " + this->getName() + " " + message + "\r\n";
 
-	if (DEBUG == DEBUG_ON)
-		PRINT_COLOR(YELLOW, "Broadcasting to " << _members.size() << " members.");
+	PRINT_COLOR(YELLOW, "Broadcasting to " << _members.size() << " members.");
 
 	for (std::map<std::string, Client*>::iterator it = _members.begin(); it != _members.end(); ++it)
 	{
@@ -148,10 +165,10 @@ void Channel::setTopic(Client* setter, const std::string& topic)
 	checkClient(setter);
 	
 	if (_topicRestricted && !isOperator(setter->getNickname()))
-		throw std::runtime_error("Only operators can change topic in restricted mode");
-	
+		throw (482);
+	_topicSetter = setter;
 	_topic = topic;
-	broadcastMessage(setter, "TOPIC " + _name + " :" + topic);
+	broadcastMessage(setter, "TOPIC set to: " + topic);
 }
 
 void Channel::setInviteOnly(bool mode)
@@ -165,6 +182,11 @@ void Channel::setTopicRestricted(bool mode)
 {
 	_topicRestricted = mode;
 	PRINT_COLOR(BLUE, "Channel TOPIC resctriction set to: " + mode);
+}
+
+void Channel::setTopicSetter(Client *client)
+{
+	_topicSetter = client;
 }
 
 void Channel::setKey(const std::string& key)
@@ -206,7 +228,7 @@ std::string Channel::getName() const
 
 std::string Channel::getTopic() const
 {
-	if (_topic == "")
+	if (_topic.empty())
 		return "Channel has no topic assigned!";
 	return _topic;
 }
@@ -219,6 +241,16 @@ size_t Channel::getMemberCount() const
 bool Channel::getHasKey() const
 {
 	return _hasKey;
+}
+
+int Channel::getMemberLimit() const
+{
+	return _userLimit;
+}
+
+Client*	Channel::getTopicSetter() const
+{
+	return _topicSetter;
 }
 
 std::string Channel::listMembers() const

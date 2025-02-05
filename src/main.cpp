@@ -56,8 +56,6 @@ std::string handleError(int errorCode)
 		case 401:
 			errorMessage = "ERR_NOSUCHNICK: No such nick/channel";
 			break;
-
-		// JOIN command errors
 		case 403:
 			errorMessage = "ERR_NOSUCHCHANNEL: No such channel";
 			break;
@@ -76,8 +74,6 @@ std::string handleError(int errorCode)
 		case 475:
 			errorMessage = "ERR_BADCHANNELKEY: Cannot join channel (+k)";
 			break;
-
-		// PRIVMSG command errors
 		case 411:
 			errorMessage = "ERR_NORECIPIENT: No recipient given";
 			break;
@@ -90,12 +86,24 @@ std::string handleError(int errorCode)
 		case 407:
 			errorMessage = "ERR_TOOMANYTARGETS: Too many recipients";
 			break;
-
-		// PART command errors
 		case 442:
 			errorMessage = "ERR_NOTONCHANNEL: You're not on that channel";
 			break;
-
+		case 482:
+			errorMessage = "ERR_CHANOPRIVSNEEDED: You're not a channel operator";
+			break;
+		case 441:
+			errorMessage = "ERR_USERNOTINCHANNEL: They aren’t on that channel";
+			break;
+		case 472:
+			errorMessage = "ERR_UNKNOWNMODE: Unknown mode";
+			break;
+		case 476:
+			errorMessage = "ERR_INVALIDMODEPARAM: Invalid mode parameter";
+			break;
+		case 467:
+			errorMessage = "ERR_KEYSET: Channel key already set";
+			break;
 		case 1001:
 			errorMessage = "ERR_EMPTYCMD: Command is empty";
 			break;
