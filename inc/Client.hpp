@@ -1,6 +1,5 @@
 #pragma once
-#include <main.hpp>
-#include <Channel.hpp>
+
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -11,6 +10,9 @@
 #include <ctime>
 #include <stdexcept>
 #include <iostream>
+
+#include <main.hpp>
+#include <Channel.hpp>
 
 class Channel;
 
@@ -26,8 +28,8 @@ class Client
 
 		bool			_hasNickname;
 		bool			_hasUsername;
-		bool			_hasHostname;
-		bool			_hasPassword;
+		//bool			_hasHostname;
+		//bool			_hasPassword;
 
 		bool			_isAuthenticated;
 		bool			_isOperator;

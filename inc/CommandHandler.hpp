@@ -1,14 +1,16 @@
 #pragma once
+
 #include <string>
 #include <iostream>
 #include <vector>
 #include <map>
-#include <Server.hpp>
-#include <Client.hpp>
-#include <Channel.hpp>
 #include <sstream>
 #include <algorithm>
 #include <stdexcept>
+
+#include <Server.hpp>
+#include <Client.hpp>
+#include <Channel.hpp>
 #include <utils.hpp>
 
 

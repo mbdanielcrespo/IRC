@@ -33,5 +33,6 @@ clean:
 fclean: clean
 	@echo "$(RED)Removing $(NAME) ...$(NC)"
 	@$(RM) $(NAME)
+	@$(RM) .vscode
 
 re: fclean all

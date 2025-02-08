@@ -1,24 +1,22 @@
-#include <Server.hpp>
-
+#include "Server.hpp"
 
 static int	setSocket(void)
 {
-	int server_fd = socket(AF_INET, SOCK_STREAM, 0);    //AF_NET = IPv4; SOCK_STREAM 0 = TCP;
-	if (server_fd < 0)
+	int server_fd = socket(PF_INET, SOCK_STREAM, 0);    //PF_NET = IPv4 ou IPv6; SOCK_STREAM 0 = TCP;
+	if (server_fd < -1)
 		throw std::runtime_error("Failed to create socket");
 	return (server_fd);
 }
 
 static void	setNonBlocking(int sock)
 {
-	int flags = fcntl(sock, F_SETFL, O_NONBLOCK);   // accept, recv, or send infinite wait on blocking mode FLAGS***
-	if (flags < 0)
+	if (fcntl(sock, F_SETFL, O_NONBLOCK) == -1)   // accept, recv, or send infinite wait on blocking mode FLAGS***
 		throw std::runtime_error("Failed to set non-blocking");
 }
 
 static void	setOpts(int sock)
 {
-	int opt = 1;	
+	int opt = 1;
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) // Port can be reused, when testing is good so it doesnt reopen
 		throw std::runtime_error("Failed to set socket options");
 }
@@ -30,7 +28,7 @@ static void	setBind(struct sockaddr_in _server_addr, int sock, int port)
 	_server_addr.sin_port = htons(port);
 
 	if (bind(sock, (struct sockaddr *)&_server_addr, sizeof(_server_addr)) < 0)
-		throw std::runtime_error("Failed to bind");
+		throw std::runtime_error("Failed to bind to that port");
 }
 
 static void setListen(int sock)
@@ -46,18 +44,54 @@ Server::Server(int port, const std::string &password) : _password(password)
 	setOpts(_server_fd);
 	setBind(_server_addr, _server_fd, port);
 	setListen(_server_fd);
-	
-	if (DEBUG == DEBUG_ON)
-		PRINT_COLOR(CYAN, "IRC Server listening on port ... " << port);
+
+	char portString[6];
+	sprintf(portString, "%d", port);
+	PRINT_COLOR(CYAN, "IRC Server listening on port: " + (std::string)portString);
 }
 
-Server::~Server()
-{
+Server::~Server( void ){
 	close(_server_fd);
 }
 
-void Server::run()
+void Server::run( void )
 {
+	/*FD_ZERO(&this->fdList);
+	FD_ZERO(&this->fdWrite);
+	FD_SET(this->serverSocket, &this->fdList);
+	while (1)
+	{
+		this->fdWrite = this->fdRead = this->fdList;
+	select(this->maxFds + 1, &this->fdRead, &this->fdWrite, NULL, NULL);
+
+		if (FD_ISSET(this->serverSocket, &this->fdRead))
+			this->acceptClient();
+		else 
+			iterateClients();
+	}
+
+
+	FD_ZERO(&_read_fds);	// Init sockets
+	FD_SET(_server_fd, &_read_fds);
+
+	while (true)
+	{
+		_temp_fds = _read_fds;
+
+		if (select(_server_fd + 1, &_temp_fds, NULL, NULL, NULL) < 0) // o fd mais alto e o do server
+			throw std::runtime_error("Error: Select failed");
+		for (int i = 0; i < _server_fd; i++)
+		{
+			if (FD_ISSET(i, &_temp_fds))
+			{
+				if (i == _server_fd)
+					this->acceptConnection();	// New client
+				else
+					this->handleClient(i);		// Existing client
+			}
+		}
+	}*/
+
 	FD_ZERO(&_read_fds);			// Init sockets
 	FD_SET(_server_fd, &_read_fds);
 

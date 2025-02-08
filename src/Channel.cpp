@@ -174,14 +174,20 @@ void Channel::setTopic(Client* setter, const std::string& topic)
 void Channel::setInviteOnly(bool mode)
 {
 	_inviteOnly = mode;
-	PRINT_COLOR(BLUE, "Channel INVITE only set to: " + mode);
+	PRINT_COLOR(BLUE, "Channel INVITE only set to: ");
+	if (mode)
+		PRINT_COLOR(BLUE, "TRUE");
+	PRINT_COLOR(BLUE, "FALSE");
 
 }
 
 void Channel::setTopicRestricted(bool mode)
 {
 	_topicRestricted = mode;
-	PRINT_COLOR(BLUE, "Channel TOPIC resctriction set to: " + mode);
+	PRINT_COLOR(BLUE, "Channel TOPIC resctriction set to: ");
+	if (mode)
+		PRINT_COLOR(BLUE, "TRUE");
+	PRINT_COLOR(BLUE, "FALSE");
 }
 
 void Channel::setTopicSetter(Client *client)
