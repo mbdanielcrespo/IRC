@@ -43,13 +43,20 @@ void Client::resolveHostname(int _socketFd)
 	}
 }
 
-Client::~Client()
+Client::~Client( void )
 {
 	_joinedChannels.clear();
 }
 
 bool Client::authenticate(const std::string& password, const std::string& srv_pass)
-{
+{/*
+	for (int i = 0;password[i];i++)
+		std::cout << '\'' << password[i] << "\' ";
+	std::cout << std::endl;
+	for (int i = 0;srv_pass[i];i++)
+		std::cout << '\'' << srv_pass[i] << "\' ";
+	std::cout << std::endl;*/
+
 	if (password.empty())
 		throw(461);
 	if (password != srv_pass)

@@ -11,6 +11,10 @@
 #include <cstring>
 #include <cstdio>
 
+#include <cstdlib>
+#include <stdexcept>
+#include <algorithm>
+
 #include "main.hpp"
 #include "Client.hpp"
 #include "Channel.hpp"
@@ -33,9 +37,9 @@ class Server
 
 	public:
 		Server(int port, const std::string &passw);
-		~Server();
+		~Server(void);
 
-		void run();
+		void run(void);
 		void acceptConnection();
 		void handleClient(int client_sock);
 		void clientDisconected(int client_sock);

@@ -1,26 +1,28 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   main.cpp                                           :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: marvin <marvin@student.42.fr>              +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/11/07 10:52:44 by marvin            #+#    #+#             */
-/*   Updated: 2024/11/07 10:52:44 by marvin           ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-#include <Server.hpp>
-
-#include <cstdlib>
-#include <stdexcept>
-#include <algorithm>
+#include "Server.hpp"
 
 std::string handleError(int errorCode)
 {
 	std::string errorMessage;
 	switch (errorCode)
 	{
+		case 401:
+			errorMessage = "ERR_NOSUCHNICK: No such nick/channel";						break;
+		case 402:
+			errorMessage = "ERR_NOSUCHSERVER: Server not found";						break;
+		case 403:
+			errorMessage = "ERR_NOSUCHCHANNEL: No such channel";						break;
+		case 404:
+			errorMessage = "ERR_CANNOTSENDTOCHAN: Cannot send to channel";				break;
+		case 405:
+			errorMessage = "ERR_TOOMANYCHANNELS: You have joined too many channels";	break;
+		case 407:
+			errorMessage = "ERR_TOOMANYTARGETS: Too many recipients";					break;
+		case 411:
+			errorMessage = "ERR_NORECIPIENT: No recipient given";						break;
+		case 412:
+			errorMessage = "ERR_NOTEXTTOSEND: No text to send";							break;
+		case 421:
+			errorMessage = "ERR_UNKNOWNCOMMAND: Unknown command";						break;
 		case 431:
 			errorMessage = "ERR_NONICKNAMEGIVEN: No nickname given";					break;
 		case 432:
@@ -29,50 +31,32 @@ std::string handleError(int errorCode)
 			errorMessage = "ERR_NICKNAMEINUSE: Nickname is already in use";				break;
 		case 436:
 			errorMessage = "ERR_NICKCOLLISION: Nickname collision";						break;
+		case 441:
+			errorMessage = "ERR_USERNOTINCHANNEL: They aren’t on that channel";			break;
+		case 442:
+			errorMessage = "ERR_NOTONCHANNEL: You're not on that channel";				break;
 		case 451:
 			errorMessage = "ERR_NOTREGISTERED: You have not registered";				break;
 		case 461:
 			errorMessage = "ERR_NEEDMOREPARAMS: Not enough parameters";					break;
 		case 464:
 			errorMessage = "ERR_PASSWDMISMATCH: Password incorrect";					break;
-		case 421:
-			errorMessage = "ERR_UNKNOWNCOMMAND: Unknown command";						break;
-		case 402:
-			errorMessage = "ERR_NOSUCHSERVER: Server not found";						break;
-		case 401:
-			errorMessage = "ERR_NOSUCHNICK: No such nick/channel";						break;
-		case 403:
-			errorMessage = "ERR_NOSUCHCHANNEL: No such channel";						break;
-		case 405:
-			errorMessage = "ERR_TOOMANYCHANNELS: You have joined too many channels";	break;
+		case 467:
+			errorMessage = "ERR_KEYSET: Channel key already set";						break;
 		case 471:
 			errorMessage = "ERR_CHANNELISFULL: Cannot join channel (+l)";				break;
+		case 472:
+			errorMessage = "ERR_UNKNOWNMODE: Unknown mode";								break;
 		case 473:
 			errorMessage = "ERR_INVITEONLYCHAN: Cannot join channel (+i)";				break;
 		case 474:
 			errorMessage = "ERR_BANNEDFROMCHAN: Cannot join channel (+b)";				break;
 		case 475:
 			errorMessage = "ERR_BADCHANNELKEY: Cannot join channel (+k)";				break;
-		case 411:
-			errorMessage = "ERR_NORECIPIENT: No recipient given";						break;
-		case 412:
-			errorMessage = "ERR_NOTEXTTOSEND: No text to send";							break;
-		case 404:
-			errorMessage = "ERR_CANNOTSENDTOCHAN: Cannot send to channel";				break;
-		case 407:
-			errorMessage = "ERR_TOOMANYTARGETS: Too many recipients";					break;
-		case 442:
-			errorMessage = "ERR_NOTONCHANNEL: You're not on that channel";				break;
-		case 482:
-			errorMessage = "ERR_CHANOPRIVSNEEDED: You're not a channel operator";		break;
-		case 441:
-			errorMessage = "ERR_USERNOTINCHANNEL: They aren’t on that channel";			break;
-		case 472:
-			errorMessage = "ERR_UNKNOWNMODE: Unknown mode";								break;
 		case 476:
 			errorMessage = "ERR_INVALIDMODEPARAM: Invalid mode parameter";				break;
-		case 467:
-			errorMessage = "ERR_KEYSET: Channel key already set";						break;
+		case 482:
+			errorMessage = "ERR_CHANOPRIVSNEEDED: You're not a channel operator";		break;
 		case 1001:
 			errorMessage = "ERR_EMPTYCMD: Command is empty";							break;
 		case 1002:
@@ -83,6 +67,8 @@ std::string handleError(int errorCode)
 			errorMessage = "Client has quit";											break;
 		case 1005:
 			errorMessage = "ERR_NOTYOURSELF: Recipient cannot be yourself!";			break;
+		case 1006:
+			errorMessage = "Please register with PASS before using any commands.";
 		default:
 			errorMessage = "Unknown error code!";
 			PRINT_ERROR(RED, errorCode);												break;

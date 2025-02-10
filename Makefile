@@ -7,7 +7,7 @@ RM = rm -rf
 
 OBJDIR = obj
 
-SRC = src/main.cpp src/utils.cpp src/Server.cpp src/Channel.cpp src/Client.cpp src/CommandHandler.cpp
+SRC = src/main.cpp src/utils.cpp src/Server.cpp src/Channel.cpp src/Client.cpp src/CommandHandler.cpp src/Commands.cpp
 INC = ./inc
 OBJ	= $(SRC:src/%.cpp=$(OBJDIR)/%.o)
 
