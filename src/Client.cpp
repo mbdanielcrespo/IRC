@@ -120,6 +120,7 @@ void Client::setNickname(const std::string& nickname)
 		_nickname = nickname;
 		_hasNickname = true;
 		PRINT_COLOR(CYAN, "NICK successfully set to: " << nickname << "!");
+		this->sendMessage(":server 001 " + nickname + " :Nick succesfully set!" + "\r\n");
 	}
 }
 
@@ -130,6 +131,7 @@ void Client::setUsername(const std::string& username)
 		_username = username;
 		_hasUsername = true;
 		PRINT_COLOR(CYAN, "USER successfully set to: " << username << "!");
+		this->sendMessage(":server 001 " + username + " :User succesfully set!" + "\r\n");
 	}
 }
 

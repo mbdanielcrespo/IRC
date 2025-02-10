@@ -58,7 +58,7 @@ void Channel::checkKey(const std::vector<std::string>& params)
 {
 	if (_hasKey && params.size() < 2)
 		throw (475);
-	if (_key != params[1])
+	if (_hasKey && _key != params[1])
 		throw(475);
 }
 
@@ -73,12 +73,6 @@ void Channel::addMember(Client* client)
 	checkClient(client);
 	
 	checkUserLimit();
-	
-	if (_inviteOnly && std::find(_invitedUsers.begin(), _invitedUsers.end(), client->getNickname()) == _invitedUsers.end())
-		throw std::runtime_error("Channel is invite-only");
-	
-	if (_hasKey && !_key.empty())
-		throw std::runtime_error("Channel requires a key to join");
 	
 	_members[client->getNickname()] = client;
 	client->sendMessage(listMembers());
@@ -104,7 +98,7 @@ void Channel::addOperator(Client* client)
 {
 	checkClient(client);
 	if (!isMember(client->getNickname()))
-		throw std::runtime_error("Only channel members can be operators");
+		throw std::runtime_error("Only channel members can be operators");		// TROCAR PELO ERROR CODE CORRETO
 	_operators[client->getNickname()] = client;
 }
 
@@ -174,14 +168,22 @@ void Channel::setTopic(Client* setter, const std::string& topic)
 void Channel::setInviteOnly(bool mode)
 {
 	_inviteOnly = mode;
-	PRINT_COLOR(BLUE, "Channel INVITE only set to: " + mode);
-
+	if (mode)
+	{
+		PRINT_COLOR(BLUE, "Channel INVITE only set to: true");
+		return;
+	}
+	PRINT_COLOR(BLUE, "Channel INVITE only set to: false");
 }
 
 void Channel::setTopicRestricted(bool mode)
 {
 	_topicRestricted = mode;
-	PRINT_COLOR(BLUE, "Channel TOPIC resctriction set to: " + mode);
+	if (mode)
+	{
+		PRINT_COLOR(BLUE, "Channel TOPIC resctriction set to: true");
+	}
+	PRINT_COLOR(BLUE, "Channel TOPIC resctriction set to: true");
 }
 
 void Channel::setTopicSetter(Client *client)

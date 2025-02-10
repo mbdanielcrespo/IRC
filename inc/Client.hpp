@@ -26,8 +26,8 @@ class Client
 
 		bool			_hasNickname;
 		bool			_hasUsername;
-		bool			_hasHostname;
-		bool			_hasPassword;
+		//bool			_hasHostname;
+		//bool			_hasPassword;
 
 		bool			_isAuthenticated;
 		bool			_isOperator;

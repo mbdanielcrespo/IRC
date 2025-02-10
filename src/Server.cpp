@@ -66,8 +66,17 @@ void Server::run()
 		_temp_fds = _read_fds;
 
 		// Mais eficiente se procurar o _server_fd mais alto ate agora e fizer loop so ate ai***
-		if (select(FD_SETSIZE + 1, &_temp_fds, NULL, NULL, NULL) < 0)
+		int activity = select(FD_SETSIZE + 1, &_temp_fds, NULL, NULL, NULL);
+		if (activity < 0)
 			throw std::runtime_error("Select failed");
+		/*
+		
+		if (errno == EINTR) // Ignorar sys call interrompida
+            continue;
+        PRINT_ERROR(RED, "Select failed!");
+        continue;
+		
+		*/
 		for (int i = 0; i < FD_SETSIZE; i++)
 		{
 			if (FD_ISSET(i, &_temp_fds))
@@ -144,6 +153,12 @@ std::string	Server::getPassword(void)	const
 {
 	return _password;
 }
+
+fd_set& Server::getReadFds()
+{
+    return _read_fds;
+}
+
 
 Client*	Server::findClient(const std::string& clientName)
 {

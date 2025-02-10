@@ -224,7 +224,6 @@ void CommandHandler::handlePart(Server* server, Client* client, const std::vecto
 	
 	std::string channelName = params[0];
 	Channel* channel = server->findChannel(channelName, NULL);
-
 	checkChannel(channel);
 
 	if (!channel->isMember(client->getNickname()))
@@ -253,29 +252,32 @@ void CommandHandler::handleKick(Server* server, Client* client, const std::vecto
 
 void CommandHandler::handleQuit(Server* server, Client* client, const std::vector<std::string>& params)
 {
-    if (!server)
+	if (!server)
 		throw(402);
 	if (!client)
 		throw(401);
 
 	std::string quitMessage;
 	if (!params.empty())
-	    quitMessage = "Client " + client->getNickname() + " has quit \r\n";
+		quitMessage = "Client " + client->getNickname() + " has quit \r\n";
 	else
 		quitMessage = "Client " + client->getNickname() + ": " + params[0] + "\r\n";
 
-    std::map<std::string, Channel*> joinedChannels = client->getJoinedChannels();
-    for (std::map<std::string, Channel*>::iterator it = joinedChannels.begin(); it != joinedChannels.end(); ++it)
-    {
-        Channel* channel = it->second;
-        if (channel)
+	std::map<std::string, Channel*> joinedChannels = client->getJoinedChannels();
+	for (std::map<std::string, Channel*>::iterator it = joinedChannels.begin(); it != joinedChannels.end(); ++it)
+	{
+		Channel* channel = it->second;
+		if (channel)
 		{
-            channel->broadcastMessage(client, "QUIT :" + quitMessage);
-            channel->removeMember(client->getNickname());
-        }
-    }
+			channel->broadcastMessage(client, "QUIT :" + quitMessage);
+			channel->removeMember(client->getNickname());
+		}
+	}
 
-    server->removeClient(client->getSocketFd());
+	int clientFd = client->getSocketFd();
+    FD_CLR(clientFd, &server->getReadFds());
+
+	server->removeClient(client->getSocketFd());
 }
 
 void CommandHandler::handleInvite(Server* server, Client* client, const std::vector<std::string>& params)
@@ -328,11 +330,11 @@ void CommandHandler::handleTopic(Server* server, Client* client, const std::vect
 	checkChannel(channel);
 	// TODO: SEND CORRECT MESSAGE TO CLIENT
 	if (params.size() == 1 && channel->getTopicSetter() == NULL)
-		client->sendMessage(":" + client->getId() + " 331 " + client->getNickname() + " :" + channel->getName() + " :" + channel->getTopic() + "\r\n");
+		client->sendMessage(":" + client->getId() + " 331 " + client->getNickname() + " " + channel->getName() + " :" + channel->getTopic() + "\r\n");
 	else if (params.size() == 1)
 	{
-		client->sendMessage(":" + client->getId() + " 332 " + client->getNickname() + " :" + channel->getName() + " :" + channel->getTopic() + "\r\n");
-		client->sendMessage(":" + client->getId() + " 333 " + client->getNickname() + " :" + channel->getName() + " " + (channel->getTopicSetter())->getId() + " :1738766800" + "\r\n");
+		client->sendMessage(":" + client->getId() + " 332 " + client->getNickname() + " " + channel->getName() + " :" + channel->getTopic() + "\r\n");		// TODO: mudar numero para timestamp correta (em numero)
+		client->sendMessage(":" + client->getId() + " 333 " + client->getNickname() + " " + channel->getName() + " " + (channel->getTopicSetter())->getId() + " :1738766800" + "\r\n");
 	}
 	if (params.size() >= 2)
 	{

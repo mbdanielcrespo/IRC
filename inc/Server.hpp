@@ -51,6 +51,7 @@ class Server
 		void clientHandleMessage(int client_sock, char *buff, int bytes_read);
 
 		std::string	getPassword(void)	const;
+		fd_set&		getReadFds(void);
 		Client*		findClient(const std::string& clientName);
 		void		removeClient(int clientFd);
 		Channel*	findChannel(const std::string& channelName, Client* client);
