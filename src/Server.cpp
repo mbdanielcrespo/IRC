@@ -207,34 +207,34 @@ void Server::removeClient(int clientFd)
 	}
 }
 
+void Server::checkChannelName(const std::string& channelName, Client* client)
+{
+	char forbiddenChars[4] = {",\x07 "};
+
+	if (channelName.empty() || std::strpbrk(channelName.c_str(), forbiddenChars) != NULL)
+	{
+		client->sendMessage(handleError(476));
+		PRINT_ERROR(RED, "ERROR: Invalid channel name: " << channelName);
+		throw (476);
+	}
+}
+
+Channel* Server::createChannel(const std::string& channelName, Client* client)
+{
+	Channel *new_channel = new Channel(channelName);
+	new_channel->addMember(client);
+	new_channel->addOperator(client);
+	this->_channels[channelName] = new_channel;
+	
+	PRINT_COLOR(CYAN, "Server: Channel " << channelName << " created by " << client->getUsername() << "!");
+	return new_channel; // CREATE CHANNEL IF IT DOESN'T EXIST
+}
+
 Channel* Server::findChannel(const std::string& channelName, Client* client)
 {
-	if (channelName.empty() || channelName[0] != '#')
-	{
-		PRINT_COLOR(RED, "Invalid channel name: " << channelName);
-		if (client)
-		{
-			std::string error_msg = channelName + " :Illegal channel name\r\n"; // ":server 479 " + client->getNickname() + " " +
-			client->sendMessage(error_msg);
-			if (DEBUG == DEBUG_ON)
-				PRINT_ERROR(RED, "ERROR: Invalid channel name: " << channelName);
-		}
-		return NULL; // RETURN NULL IF DOESNT EXIST AND NAME INVALID
-	}
-	
 	std::map<std::string, Channel*>::iterator it = this->_channels.find(channelName);
 	if (it != _channels.end())
 		return it->second; // RETURN CHANNEL IF EXISTS
-	else if (client)
-	{
-		Channel *new_channel = new Channel(channelName);
-		new_channel->addMember(client);
-		new_channel->addOperator(client);
-		this->_channels[channelName] = new_channel;
-		
-		PRINT_COLOR(CYAN, "Server: Channel " << channelName << " created by " << client->getUsername() << "!");
-		return new_channel; // CREATE CHANNEL IF IT DOESN'T EXIST
-	}
 	return NULL;
 }
 

@@ -67,15 +67,18 @@ void CommandHandler::handleJoin(Server* server, Client* client, const std::vecto
 		throw(461);
 
 	while (std::getline(ss, channelName, ',')) {
+		server->checkChannelName(channelName, client);
 		Channel *channel = server->findChannel(channelName, client);
-		checkChannel(channel);
+		if (channel == NULL)
+			server->createChannel(channelName, client);
 		channel->checkInviteOnly();
 		channel->checkUserLimit();
-		channel->checkKey(params);
+		if (channel->getHasKey())
+			channel->checkKey(params);
 
+		// o cliente e adicionado, a msg e mandada a todo o channel -> o cliente vai receber a sua provpria entrada
 		client->joinChannel(channel);
-		std::string joinMessage = ":" + client->getId() + " JOIN :" + channelName + "\r\n";
-		client->sendMessage(joinMessage);
+		client->sendMessage(":" + client->getId() + " JOIN :" + channelName + "\r\n");
 	}
 }
 

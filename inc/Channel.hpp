@@ -46,12 +46,12 @@ class Channel
 		void		kick(Client* kicker, const std::string& nickname);
 		void		setTopic(Client* setter, const std::string& topic);
 
-		std::string	getName() const;
-		std::string	getTopic() const;
-		size_t		getMemberCount() const;
-		bool		getHasKey() const;
-		int 		getMemberLimit() const;
-		Client		*getTopicSetter() const;
+		std::string	getName( void ) const;
+		std::string	getTopic( void ) const;
+		size_t		getMemberCount( void ) const;
+		bool		getHasKey( void ) const;
+		int 		getMemberLimit( void ) const;
+		Client		*getTopicSetter( void ) const;
 
 		void 		checkOperator(Client* client);
 		void 		checkClient(Client* client);

@@ -49,5 +49,7 @@ class Server
 		Client*		findClient(const std::string& clientName);
 		void		removeClient(int clientFd);
 		Channel*	findChannel(const std::string& channelName, Client* client);
+		void		checkChannelName(const std::string& channelName, Client* client);
+		Channel*	createChannel(const std::string& channelName, Client* client);
 		int 		isNicknameInUse(std::string);
 };

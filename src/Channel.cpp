@@ -47,18 +47,13 @@ void Channel::checkOperator(Client* client)
 
 void Channel::checkUserLimit(void)
 {
-	if (this->_userLimit != static_cast<size_t>(-1))
-	{
-		if (this->getMemberCount() >= this->_userLimit)
-			throw(471);
-	}
+	if (this->getMemberCount() >= this->_userLimit)
+		throw(471);
 }
 
 void Channel::checkKey(const std::vector<std::string>& params)
 {
-	if (_hasKey && params.size() < 2)
-		throw (475);
-	if (_key != params[1])
+	if (params.size() < 2 || _key != params[1])
 		throw(475);
 }
 
@@ -72,13 +67,13 @@ void Channel::addMember(Client* client)
 {
 	checkClient(client);
 	
-	checkUserLimit();
-	
+	/*
 	if (_inviteOnly && std::find(_invitedUsers.begin(), _invitedUsers.end(), client->getNickname()) == _invitedUsers.end())
 		throw std::runtime_error("Channel is invite-only");
 	
 	if (_hasKey && !_key.empty())
 		throw std::runtime_error("Channel requires a key to join");
+	*/
 	
 	_members[client->getNickname()] = client;
 	client->sendMessage(listMembers());
@@ -214,6 +209,7 @@ void Channel::setKey(const std::string& key)
 
 void Channel::setUserLimit(size_t limit)
 {
+	//if (limit > static_cast<size_t>(-1))  e suposto checkar oq
 	_userLimit = limit;
 }
 

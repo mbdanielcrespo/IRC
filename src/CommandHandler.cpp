@@ -1,11 +1,12 @@
 #include <CommandHandler.hpp>
 #include <Channel.hpp>
 
+/*
 void CommandHandler::checkChannel(Channel *channel)
 {
 	if (channel == NULL)
 		throw (403);
-}
+}*/
 
 std::vector<std::string> CommandHandler::splitCommand(const std::string& raw_command)
 {

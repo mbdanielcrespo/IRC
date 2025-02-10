@@ -53,8 +53,8 @@ std::string handleError(int errorCode)
 			errorMessage = "ERR_BANNEDFROMCHAN: Cannot join channel (+b)";				break;
 		case 475:
 			errorMessage = "ERR_BADCHANNELKEY: Cannot join channel (+k)";				break;
-		case 476:
-			errorMessage = "ERR_INVALIDMODEPARAM: Invalid mode parameter";				break;
+		case 479:
+			errorMessage = "ERR_BADCHANNAME: :Invalid channel name";					break;
 		case 482:
 			errorMessage = "ERR_CHANOPRIVSNEEDED: You're not a channel operator";		break;
 		case 1001:
@@ -68,7 +68,9 @@ std::string handleError(int errorCode)
 		case 1005:
 			errorMessage = "ERR_NOTYOURSELF: Recipient cannot be yourself!";			break;
 		case 1006:
-			errorMessage = "Please register with PASS before using any commands.";
+			errorMessage = "Please register with PASS before using any commands.";		break;
+		case 1007:
+			errorMessage = "Invalid mode parameter";									break;
 		default:
 			errorMessage = "Unknown error code!";
 			PRINT_ERROR(RED, errorCode);												break;
