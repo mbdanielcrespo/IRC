@@ -45,6 +45,7 @@ void CommandHandler::processAuth(Server* server, Client* client, const std::stri
 		if (raw_command.compare(0, 10, "CAP LS 302") == 0)
 		{
 			PRINT_COLOR(CYAN, "Command read: CAP LS 302, automatic authentication process!");
+			client->sendMessage("CAP * LS :\r\n");
 			processAutomaticAuth(server, client, raw_command);
 			return;
 		}
@@ -165,7 +166,7 @@ void CommandHandler::handleNick(Server* server, Client* client, const std::vecto
 	if (!server)
 		throw(402);
 	if (!client)
-		PRINT_ERROR(RED, handleError(401));
+		throw(401);
 	if (params.size() < 1)
 		throw(431);
 
@@ -184,7 +185,10 @@ void CommandHandler::handleNick(Server* server, Client* client, const std::vecto
 
 void CommandHandler::handleUser(Server* server, Client* client, const std::vector<std::string>& params)
 {
-	(void)server;
+	if (!server)
+		throw(402);
+	if (!client)
+		throw(401);
 	if (params.size() < 4)
 	{
 		PRINT_COLOR(RED, "Requires: username hosname servename realname");
@@ -207,13 +211,13 @@ void CommandHandler::handleJoin(Server* server, Client* client, const std::vecto
 	std::string channelName = params[0];
 	Channel *channel = server->findChannel(channelName, client);
 	checkChannel(channel);
-	channel->checkInviteOnly();
+	channel->checkInviteOnly(client);
 	channel->checkUserLimit();
 	channel->checkKey(params);
 
 	client->joinChannel(channel);
-	std::string joinMessage = ":" + client->getId() + " JOIN :" + channelName + "\r\n";
-	client->sendMessage(joinMessage);
+
+	
 }
 
 // DONE
@@ -326,9 +330,10 @@ void CommandHandler::handleTopic(Server* server, Client* client, const std::vect
 
 	if (params.size() == 0)
 		throw(401);
-	channel = server->findChannel(params[0], client);
+	channel = server->findChannel(params[0], NULL);
 	checkChannel(channel);
-	// TODO: SEND CORRECT MESSAGE TO CLIENT
+	channel->checkTopicRestricted(client);
+	
 	if (params.size() == 1 && channel->getTopicSetter() == NULL)
 		client->sendMessage(":" + client->getId() + " 331 " + client->getNickname() + " " + channel->getName() + " :" + channel->getTopic() + "\r\n");
 	else if (params.size() == 1)
@@ -409,7 +414,9 @@ void CommandHandler::handleMode(Server* server, Client* client, const std::vecto
 		Client *new_op = server->findClient(params[2]);
 		channel->checkClient(new_op);
 		if (!channel->isMember(params[2]))
-			throw(441);		
+			throw(441);
+		if (channel->isOperator(new_op->getNickname()))
+			throw(1006);	
 		channel->addOperator(new_op);
 	}
 	else if (modeString == "-o" && params.size() < 3) throw(476);

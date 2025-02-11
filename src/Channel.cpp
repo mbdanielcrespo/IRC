@@ -16,7 +16,7 @@ Channel::Channel(const std::string& name) :
 
 	_members(),    
 	_operators(),
-	_invitedUsers() 
+	_invitedUsers()
 {
 	
 	//if (name.empty())
@@ -62,10 +62,22 @@ void Channel::checkKey(const std::vector<std::string>& params)
 		throw(475);
 }
 
-void Channel::checkInviteOnly(void)
+void Channel::checkInviteOnly(Client *client)
 {
 	if (_inviteOnly)
-		throw(473);
+	{
+		if (!this->isInvited(client->getNickname()))
+			throw(473);
+	}
+}
+
+void Channel::checkTopicRestricted(Client *client)
+{
+	if (_topicRestricted)
+	{
+		if (!this->isOperator(client->getNickname()))
+			throw(482);
+	}
 }
 
 void Channel::addMember(Client* client)
@@ -75,8 +87,12 @@ void Channel::addMember(Client* client)
 	checkUserLimit();
 	
 	_members[client->getNickname()] = client;
+	client->sendMessage(":ircserv 332 " + client->getNickname() + " " + this->getName() + " :Welcome to channel " + this->getName() + "!\r\n");
+	client->sendMessage(":ircserv 353 " + client->getNickname() + " = " + this->getName() + " :Start names list\r\n");
 	client->sendMessage(listMembers());
 	client->sendMessage(listOperators());
+	client->sendMessage(":ircserv 366 " + client->getNickname() + " " + this->getName() + " :End of names list\r\n");
+
 	broadcastMessage(client, "has joined the channel \r\n");
 }
 
@@ -115,7 +131,6 @@ void Channel::broadcastMessage(Client* sender, const std::string& message)
 	checkClient(sender);
 
 	std::string fullMessage = ":" + sender->getId() + " PRIVMSG " + this->getName() + " " + message + "\r\n";
-
 	PRINT_COLOR(YELLOW, "Broadcasting to " << _members.size() << " members.");
 
 	for (std::map<std::string, Client*>::iterator it = _members.begin(); it != _members.end(); ++it)
@@ -130,13 +145,45 @@ void Channel::broadcastMessage(Client* sender, const std::string& message)
 	}
 }
 
+void Channel::broadcastLogMessage(Client* sender, const std::string& message)
+{
+	checkClient(sender);
+
+	for (std::map<std::string, Client*>::iterator it = _members.begin(); it != _members.end(); ++it)
+	{
+		Client* recipient = it->second;
+
+		if (recipient)
+		{
+			if (recipient != sender)
+				recipient->sendMessage(message);
+		}
+	}
+}
+
+void Channel::addInvitedUser(const std::string& nickname)
+{
+    if (std::find(_invitedUsers.begin(), _invitedUsers.end(), nickname) == _invitedUsers.end())
+    {
+        _invitedUsers.push_back(nickname);
+        PRINT_COLOR(GREEN, "User " + nickname + " has been added to the invite list for " + _name);
+    }
+}
+
+bool Channel::isInvited(const std::string& nickname) const
+{
+	if (std::find(_invitedUsers.begin(), _invitedUsers.end(), nickname) != _invitedUsers.end())
+    	return true;
+	return false;
+}
+
 void Channel::inviteUser(Client* inviter, Client* invited)
 {
 	checkClient(inviter);
 	checkClient(invited);
 	checkOperator(inviter);
 	
-	_invitedUsers.push_back(invited->getNickname());
+	this->addInvitedUser(invited->getNickname());
 	std::string joinMessage = ":" + inviter->getId() + " INVITE " + invited->getNickname() + " :" + _name + "\r\n";
 	invited->sendMessage(joinMessage);
 }
@@ -182,8 +229,9 @@ void Channel::setTopicRestricted(bool mode)
 	if (mode)
 	{
 		PRINT_COLOR(BLUE, "Channel TOPIC resctriction set to: true");
+		return;
 	}
-	PRINT_COLOR(BLUE, "Channel TOPIC resctriction set to: true");
+	PRINT_COLOR(BLUE, "Channel TOPIC resctriction set to: false");
 }
 
 void Channel::setTopicSetter(Client *client)
@@ -211,6 +259,13 @@ void Channel::setKey(const std::string& key)
 void Channel::setUserLimit(size_t limit)
 {
 	_userLimit = limit;
+	if (limit <= 0)
+	{
+		PRINT_COLOR(BLUE, "Channel USERLIMIT unset");
+		return;
+	}
+	PRINT_COLOR(BLUE, "Channel USERLIMIT set to:");
+	PRINT_COLOR(YELLOW, limit);
 }
 
 bool Channel::isMember(const std::string& nickname) const

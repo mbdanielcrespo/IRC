@@ -209,7 +209,7 @@ Channel* Server::findChannel(const std::string& channelName, Client* client)
 	else if (client)
 	{
 		Channel *new_channel = new Channel(channelName);
-		new_channel->addMember(client);
+		client->joinChannel(new_channel);
 		new_channel->addOperator(client);
 		this->_channels[channelName] = new_channel;
 		

@@ -119,6 +119,9 @@ std::string handleError(int errorCode)
 		case 1005:
 			errorMessage = "ERR_NOTYOURSELF: Recipient cannot be yourself!";
 			break;
+		case 1006:
+			errorMessage = "ERR_ALREADYOP: User is an operator already!";
+			break;
 		default:
 			errorMessage = "Unknown error code!";
 			PRINT_ERROR(RED, errorCode);

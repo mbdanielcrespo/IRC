@@ -68,8 +68,9 @@ bool Client::authenticate(const std::string& password, const std::string& srv_pa
 
 void Client::joinChannel(Channel* channel)
 {
-	if (channel != NULL)
+	if (channel != NULL && !channel->isMember(this->getNickname()))
 	{
+		this->sendMessage(":" + this->getId() + " JOIN :" + channel->getName() + "\r\n");
 		channel->addMember(this),
 		_joinedChannels[channel->getName()] = channel;
 	}
@@ -119,8 +120,9 @@ void Client::setNickname(const std::string& nickname)
 	{
 		_nickname = nickname;
 		_hasNickname = true;
-		PRINT_COLOR(CYAN, "NICK successfully set to: " << nickname << "!");
-		this->sendMessage(":server 001 " + nickname + " :Nick succesfully set!" + "\r\n");
+		this->sendMessage("NICK successfully set to: " + nickname + "!\r\n");
+		if (_hasUsername)
+			this->sendMessage(":server 001 " + _nickname + " :Welcome to the IRC network!\r\n");
 	}
 }
 
@@ -130,8 +132,9 @@ void Client::setUsername(const std::string& username)
 	{
 		_username = username;
 		_hasUsername = true;
-		PRINT_COLOR(CYAN, "USER successfully set to: " << username << "!");
-		this->sendMessage(":server 001 " + username + " :User succesfully set!" + "\r\n");
+		this->sendMessage("USER successfully set to: " + username + "!\r\n");
+		if (_hasNickname)
+			this->sendMessage(":server 001 " + _nickname + " :Welcome to the IRC network!\r\n");
 	}
 }
 
