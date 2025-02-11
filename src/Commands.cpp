@@ -68,15 +68,14 @@ void CommandHandler::handleJoin(Server* server, Client* client, const std::vecto
 
 	while (std::getline(ss, channelName, ',')) {
 		server->checkChannelName(channelName, client);
-		Channel *channel = server->findChannel(channelName, client);
+		Channel *channel = server->findChannel(channelName);
 		if (channel == NULL)
-			server->createChannel(channelName, client);
+			channel = server->createChannel(channelName, client);
 		channel->checkInviteOnly();
 		channel->checkUserLimit();
 		if (channel->getHasKey())
 			channel->checkKey(params);
 
-		// o cliente e adicionado, a msg e mandada a todo o channel -> o cliente vai receber a sua provpria entrada
 		client->joinChannel(channel);
 		client->sendMessage(":" + client->getId() + " JOIN :" + channelName + "\r\n");
 	}
@@ -89,9 +88,9 @@ void CommandHandler::handlePart(Server* server, Client* client, const std::vecto
 		throw(461);
 	
 	std::string channelName = params[0];
-	Channel* channel = server->findChannel(channelName, NULL);
+	Channel* channel = server->findChannel(channelName);
 
-	checkChannel(channel);
+	//checkChannel(channel);
 
 	if (!channel->isMember(client->getNickname()))
 		throw(442);
@@ -108,7 +107,7 @@ void CommandHandler::handleKick(Server* server, Client* client, const std::vecto
 
 	std::string channelName = params[0];
 	std::string targetNickname = params[1];
-	Channel* channel = server->findChannel(channelName, NULL);
+	Channel* channel = server->findChannel(channelName);
 
 	if (!channel)
 		throw(401);
@@ -154,10 +153,10 @@ void CommandHandler::handleInvite(Server* server, Client* client, const std::vec
 	std::string channelName = params[1];
 	
 	Client* targetClient = server->findClient(targetNickname);
-	Channel* channel = server->findChannel(channelName, NULL);
+	Channel* channel = server->findChannel(channelName);
 
 	channel->checkClient(targetClient);
-	checkChannel(channel);
+	//checkChannel(channel);
 
 	if (client == targetClient)
 	{
@@ -190,8 +189,8 @@ void CommandHandler::handleTopic(Server* server, Client* client, const std::vect
 
 	if (params.size() == 0)
 		throw(401);
-	channel = server->findChannel(params[0], client);
-	checkChannel(channel);
+	channel = server->findChannel(params[0]);
+	//checkChannel(channel);
 	// TODO: SEND CORRECT MESSAGE TO CLIENT
 	if (params.size() == 1 && channel->getTopicSetter() == NULL)
 		client->sendMessage(":" + client->getId() + " 331 " + client->getNickname() + " :" + channel->getName() + " :" + channel->getTopic() + "\r\n");
@@ -223,7 +222,7 @@ void CommandHandler::handlePrivMsg(Server* server, Client* client, const std::ve
 	message = params[1];
 	
 	Client* targetClient = server->findClient(recipient);
-	Channel* targetChannel = server->findChannel(recipient, NULL);
+	Channel* targetChannel = server->findChannel(recipient);
 
 	if (targetClient == client)
 		throw(1005);
@@ -236,67 +235,63 @@ void CommandHandler::handlePrivMsg(Server* server, Client* client, const std::ve
 		throw(411);
 }
 
+static bool getSymbol(char c)
+{
+	if (c != '+' || c != '-')
+		throw (472);
+	if (c == '+')
+		return (true);
+	return (false);
+}
+
 // TODO: TEST
 void CommandHandler::handleMode(Server* server, Client* client, const std::vector<std::string>& params)
 {
-	bool flag;
+	bool flag = false;
 
 	if (params.size() < 2)
 		throw(461);
 
 	std::string target = params[0];
 	std::string modeString = params[1];
-	Channel* channel = server->findChannel(target, NULL);
+	Channel* channel = server->findChannel(target);
 
-	checkChannel(channel);
 	if (!channel->isOperator(client->getNickname()))
 		throw(482);
 
-	if (modeString == "+k" && params.size() < 3)
-		throw(476);
-	else if (modeString == "+k" && params.size() == 3)
-		channel->setKey(params[2]);
-	/*switch(modeString)
+	if (modeString.size() < 2)
+		;//sendChannelModes();
+	else
 	{
-		case "-k" : channel->setKey("");
-		default: break;
-	}*/
-	else if (modeString == "-k") channel->setKey("");
-	else if (modeString == "+i") channel->setInviteOnly(true);
-	else if (modeString == "-i") channel->setInviteOnly(false);
-	else if (modeString == "+t") channel->setTopicRestricted(true);
-	else if (modeString == "-t") channel->setTopicRestricted(false);
-	else if (modeString == "+l" && params.size() < 3) throw(461);
-	else if (modeString == "+l" && params.size() == 3)
-	{
-		std::istringstream iss(params[2]);
-		size_t val;
-		if (!(iss >> val))
-			throw(476);
-		channel->setUserLimit(val);
+		flag = getSymbol(modeString[0]); //checks if the flag is valid 
+
+		switch(modeString[1]){
+			case 'i':	channel->setInviteOnly(flag);		return ;	break;
+			case 't':	channel->setTopicRestricted(flag);	return ;	break;
+			default: 													break;
+		}
+
+		if (params.size() < 3)
+			throw (696);
+
+		Client *new_op = NULL;
+		switch(modeString[1]){
+			case 'k':	channel->setKey(params[2], flag);				break;
+			case 'l':	channel->setUserLimit(params[2], flag);			break;
+			case 'o':	new_op = server->findClient(params[2]);
+						channel->checkClient(new_op);
+						if (!channel->isMember(params[2]))
+							throw(441);
+						if (flag == true)
+							channel->addOperator(new_op);
+						else
+							channel->removeOperator(params[2]);	
+						break;
+			default:	throw(472);										break;
+		}
 	}
-	else if (modeString == "-l") channel->setUserLimit(-1);
-	else if (modeString == "+o" && params.size() < 3) throw(476);
-	else if (modeString == "+o" && params.size() == 3)
-	{
-		Client *new_op = server->findClient(params[2]);
-		channel->checkClient(new_op);
-		if (!channel->isMember(params[2]))
-			throw(441);		
-		channel->addOperator(new_op);
-	}
-	else if (modeString == "-o" && params.size() < 3) throw(476);
-	else if (modeString == "-o" && params.size() == 3)
-	{
-		Client *new_op = server->findClient(params[2]);
-		channel->checkClient(new_op);
-		if (!channel->isMember(params[2]))
-			throw(441);
-		channel->removeOperator(params[2]);
-	}
-	else throw(472);
 }
 
 //TODO: WHO (handle)
 //TODO: SEND SERVER CORRECT MESSAGE FOR NICK FOR BEING ABLE TO JOIN CHANNELS AFTERWARDS
-//TODO: TEST MODES AND ALL OTHER COMMANDS WITH MMODES	
+//TODO: TEST MODES AND ALL OTHER COMMANDS WITH MMODES

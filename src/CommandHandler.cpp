@@ -111,15 +111,12 @@ void CommandHandler::processCommand(Server* server, Client* client, const std::s
 		if (raw_command.empty())
 			throw(1001);
 
-		std::vector<std::string> parts = splitStr(raw_command, ' ');
-		for (size_t i = 0; i < parts.size(); i++)
-			PRINT_COLOR(RED, parts[i]);
+		std::vector<std::string> arguments = splitCommand(raw_command);	
 
-		std::string command = parts[0];
+		std::string command = arguments[0];
 		std::transform(command.begin(), command.end(), command.begin(), ::toupper);
-		std::vector<std::string> params(parts.begin() + 1, parts.end());
+		std::vector<std::string> params(arguments.begin() + 1, arguments.end());
 
-		typedef void (*HandlerFunction)(Server*, Client*, const std::vector<std::string>&);
 		std::vector<std::string> commands;
 		commands.push_back("JOIN");
 		commands.push_back("PRIVMSG");
@@ -149,8 +146,7 @@ void CommandHandler::processCommand(Server* server, Client* client, const std::s
 				return;	
 			}
 		}
-		throw(421);
-		return ;
+		throw(1006);
 	}
 	catch(int err)
 	{

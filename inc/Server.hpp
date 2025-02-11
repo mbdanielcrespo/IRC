@@ -48,7 +48,7 @@ class Server
 		std::string	getPassword(void)	const;
 		Client*		findClient(const std::string& clientName);
 		void		removeClient(int clientFd);
-		Channel*	findChannel(const std::string& channelName, Client* client);
+		Channel*	findChannel(const std::string& channelName);
 		void		checkChannelName(const std::string& channelName, Client* client);
 		Channel*	createChannel(const std::string& channelName, Client* client);
 		int 		isNicknameInUse(std::string);

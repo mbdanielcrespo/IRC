@@ -34,18 +34,17 @@ class Channel
 		void		removeOperator(const std::string& nickname);
 		bool		isOperator(const std::string& nickname) const;
 
-		void		setInviteOnly(bool mode);
-		void		setTopicRestricted(bool mode);
-		void		setKey(const std::string& key);
-		void		setUserLimit(size_t limit);
-		void 		setTopicSetter(Client *client);
-
 		void		broadcastMessage(Client* sender, const std::string& message);
 		void		inviteUser(Client* inviter, Client* invited);
-
 		void		kick(Client* kicker, const std::string& nickname);
-		void		setTopic(Client* setter, const std::string& topic);
 
+		void		setTopic(Client* setter, const std::string& topic);
+		void		setInviteOnly(bool mode);
+		void		setTopicRestricted(bool mode);
+		void		setKey(const std::string& key, bool flag);
+		void		setUserLimit(const std::string& limit, bool flag);
+		void 		setTopicSetter(Client *client);
+		void		setHasKey(bool flag);
 		std::string	getName( void ) const;
 		std::string	getTopic( void ) const;
 		size_t		getMemberCount( void ) const;

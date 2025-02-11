@@ -66,19 +66,11 @@ void Channel::checkInviteOnly(void)
 void Channel::addMember(Client* client)
 {
 	checkClient(client);
-	
-	/*
-	if (_inviteOnly && std::find(_invitedUsers.begin(), _invitedUsers.end(), client->getNickname()) == _invitedUsers.end())
-		throw std::runtime_error("Channel is invite-only");
-	
-	if (_hasKey && !_key.empty())
-		throw std::runtime_error("Channel requires a key to join");
-	*/
-	
-	_members[client->getNickname()] = client;
+
 	client->sendMessage(listMembers());
 	client->sendMessage(listOperators());
 	broadcastMessage(client, "has joined the channel \r\n");
+	_members[client->getNickname()] = client;
 }
 
 void Channel::removeMember(const std::string& nickname)
@@ -190,27 +182,32 @@ void Channel::setTopicSetter(Client *client)
 	_topicSetter = client;
 }
 
-void Channel::setKey(const std::string& key)
+void Channel::setHasKey(bool flag)
 {
-	if (!_key.empty())
-		throw(476);
-	_key = key;
-	if (key.empty())
-	{
-		_hasKey = false;
-		PRINT_COLOR(BLUE, "Channel KEY Unset");
-		return;
-	}
-	_hasKey = true;
-	PRINT_COLOR(BLUE, "Channel KEY set to: " + key);
-
-
+	_hasKey = flag;
 }
 
-void Channel::setUserLimit(size_t limit)
+void Channel::setKey(const std::string& key, bool flag)
 {
-	//if (limit > static_cast<size_t>(-1))  e suposto checkar oq
-	_userLimit = limit;
+	if (flag == true)
+	{
+		_key = key;
+		_hasKey = true;
+		PRINT_COLOR(BLUE, "Channel KEY set to: " + key);
+		return ;
+	}
+
+	_key = "";
+	_hasKey = false;
+	PRINT_COLOR(BLUE, "Channel KEY Unset");
+}
+
+void Channel::setUserLimit(const std::string& limit, bool flag)
+{
+	if (flag == true)  //protect max? // proteger para limit = ""
+		_userLimit = std::atoi(limit.c_str());
+	else
+		_userLimit = -1;
 }
 
 bool Channel::isMember(const std::string& nickname) const
