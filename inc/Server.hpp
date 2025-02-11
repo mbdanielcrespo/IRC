@@ -25,6 +25,8 @@
 #include <CommandHandler.hpp>
 #include <cstring>
 #include <string>
+#include <errno.h>
+
 
 #define MAX_CLIENTS 100
 #define BUFFER_SIZE 1024
@@ -40,7 +42,6 @@ class Server
 		std::map<int, Client*> 			_clients;
 		std::map<std::string, Channel*>	_channels;
 		
-
 	public:
 		Server(int port, const std::string &passw);
 		~Server();

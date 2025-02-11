@@ -84,13 +84,13 @@ void CommandHandler::processAuth(Server* server, Client* client, const std::stri
 		client->sendMessage(handleError(err));
 	}
 }
+
 /*
 According to the IRC protocol (both IRCv2 and IRCv3), commands like PASS, NICK, and USER 
 are registration commands and are not allowed to be used after a client has successfully 
 authenticated. Once a client has completed the registration process, these commands are 
 ignored or result in an error message from the server.
 */
-
 void CommandHandler::processCommand(Server* server, Client* client, const std::string& raw_command)
 {
 	try
@@ -160,7 +160,6 @@ void CommandHandler::handlePass(Server* server, Client* client, const std::vecto
 		client->sendMessage("Password authentication successfull!\nYou can now send commands to this server!\n");
 }
 
-
 void CommandHandler::handleNick(Server* server, Client* client, const std::vector<std::string>& params)
 {
 	if (!server)
@@ -181,7 +180,6 @@ void CommandHandler::handleNick(Server* server, Client* client, const std::vecto
 		"USER: " + client->getUsername() + "\n"
 	);
 }
-
 
 void CommandHandler::handleUser(Server* server, Client* client, const std::vector<std::string>& params)
 {

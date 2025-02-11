@@ -60,23 +60,25 @@ void Server::run()
 {
 	FD_ZERO(&_read_fds);			// Init sockets
 	FD_SET(_server_fd, &_read_fds);
-
+	
 	while (true)
 	{
 		_temp_fds = _read_fds;
 
 		// Mais eficiente se procurar o _server_fd mais alto ate agora e fizer loop so ate ai***
 		int activity = select(FD_SETSIZE + 1, &_temp_fds, NULL, NULL, NULL);
+		//if (activity < 0)
+		//	throw std::runtime_error("Select failed");
 		if (activity < 0)
+		{
+			if (errno == EINTR) // Ignorar sys call interrompida
+			{
+				PRINT_ERROR(RED, "System call interrupted");
+				continue;
+			}
 			throw std::runtime_error("Select failed");
-		/*
+		}
 		
-		if (errno == EINTR) // Ignorar sys call interrompida
-            continue;
-        PRINT_ERROR(RED, "Select failed!");
-        continue;
-		
-		*/
 		for (int i = 0; i < FD_SETSIZE; i++)
 		{
 			if (FD_ISSET(i, &_temp_fds))
@@ -104,13 +106,8 @@ void Server::acceptConnection()
 
 		Client* newClient = new Client(new_client_sock);
 		_clients[new_client_sock] = newClient;
-		
-		if (DEBUG == DEBUG_ON)	
-			PRINT_COLOR(GREEN, "Client connected successfully: " << new_client_sock);
+		PRINT_COLOR(GREEN, "Client connected successfully: " << new_client_sock);
 
-		//// WHY FD_SET twice?
-
-		FD_SET(new_client_sock, &_read_fds);
 		std::string welcome = "Please provide connection password using PASS command\r\n";
 		send(new_client_sock, welcome.c_str(), welcome.length(), 0);
 	}
@@ -156,9 +153,8 @@ std::string	Server::getPassword(void)	const
 
 fd_set& Server::getReadFds()
 {
-    return _read_fds;
+	return _read_fds;
 }
-
 
 Client*	Server::findClient(const std::string& clientName)
 {
@@ -221,13 +217,13 @@ Channel* Server::findChannel(const std::string& channelName, Client* client)
 
 int Server::isNicknameInUse(std::string nickname)
 {
-    for (std::map<int, Client*>::iterator it = this->_clients.begin(); it != this->_clients.end(); ++it)
-    {
-        if (it->second == NULL)
-            continue;
+	for (std::map<int, Client*>::iterator it = this->_clients.begin(); it != this->_clients.end(); ++it)
+	{
+		if (it->second == NULL)
+			continue;
 
-        if (it->second->getNickname() == nickname)
-            return true;
-    }
-    return false;
+		if (it->second->getNickname() == nickname)
+			return true;
+	}
+	return false;
 }
