@@ -10,6 +10,7 @@
 #include <string>
 #include <cstring>
 #include <cstdio>
+#include <errno.h>
 
 #include <cstdlib>
 #include <stdexcept>
@@ -28,13 +29,12 @@ class Server
 	private:
 		int								_server_fd;
 		fd_set							_read_fds, _temp_fds;
-		std::string						_password;
 		struct sockaddr_in				_server_addr;
 		std::map<int, Client*> 			_clients;
 		std::map<int, std::string>		_client_buffers;
 		std::map<std::string, Channel*>	_channels;
+		std::string						_password;
 		
-
 	public:
 		Server(int port, const std::string &passw);
 		~Server(void);
@@ -46,6 +46,7 @@ class Server
 		void clientHandleMessage(int client_sock, char *buff, int bytes_read);
 
 		std::string	getPassword(void)	const;
+		fd_set&		getReadFds(void);
 		Client*		findClient(const std::string& clientName);
 		void		removeClient(int clientFd);
 		Channel*	findChannel(const std::string& channelName);

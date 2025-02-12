@@ -23,6 +23,7 @@ static void	setOpts(int sock)
 
 static void	setBind(struct sockaddr_in _server_addr, int sock, int port)
 {
+
 	_server_addr.sin_family = AF_INET;
 	_server_addr.sin_addr.s_addr = INADDR_ANY;
 	_server_addr.sin_port = htons(port);
@@ -68,41 +69,27 @@ void Server::run( void )
 			this->acceptClient();
 		else 
 			iterateClients();
-	}
-
-
-	FD_ZERO(&_read_fds);	// Init sockets
-	FD_SET(_server_fd, &_read_fds);
-
-	while (true)
-	{
-		_temp_fds = _read_fds;
-
-		if (select(_server_fd + 1, &_temp_fds, NULL, NULL, NULL) < 0) // o fd mais alto e o do server
-			throw std::runtime_error("Error: Select failed");
-		for (int i = 0; i < _server_fd; i++)
-		{
-			if (FD_ISSET(i, &_temp_fds))
-			{
-				if (i == _server_fd)
-					this->acceptConnection();	// New client
-				else
-					this->handleClient(i);		// Existing client
-			}
-		}
 	}*/
 
 	FD_ZERO(&_read_fds);			// Init sockets
 	FD_SET(_server_fd, &_read_fds);
-
+	
 	while (true)
 	{
 		_temp_fds = _read_fds;
-
-		// Mais eficiente se procurar o _server_fd mais alto ate agora e fizer loop so ate ai***
-		if (select(FD_SETSIZE + 1, &_temp_fds, NULL, NULL, NULL) < 0)
+	
+		int activity = select(_server_fd + 1, &_temp_fds, &_temp_fds, NULL, NULL);
+		if (activity < 0)
+		{
+			if (errno == EINTR) // Ignorar sys call interrompida
+			{
+				PRINT_ERROR(RED, "System call interrupted");
+				continue;
+			}
 			throw std::runtime_error("Select failed");
-		for (int i = 0; i < FD_SETSIZE; i++)
+		}
+		
+		for (int i = 0; i < _server_fd; i++)
 		{
 			if (FD_ISSET(i, &_temp_fds))
 			{
@@ -129,7 +116,6 @@ void Server::acceptConnection()
 
 		Client* newClient = new Client(new_client_sock);
 		_clients[new_client_sock] = newClient;
-		
 		PRINT_COLOR(GREEN, "Client connected successfully: " << new_client_sock);
 
 		std::string welcome = "Please provide connection password using PASS command\r\n";
@@ -142,7 +128,7 @@ void Server::acceptConnection()
 void Server::handleClient(int client_sock)
 {
 	char buff[BUFFER_SIZE];
-	int bytes_read = recv(client_sock, buff, sizeof(buff) - 1, 0);
+	int bytes_read = recv(client_sock, buff, BUFFER_SIZE, 0);
 	
 	if (bytes_read <= 0)
 		clientDisconected(client_sock);
@@ -153,9 +139,9 @@ void Server::handleClient(int client_sock)
 void Server::clientDisconected(int client_sock)
 {
 	PRINT_COLOR(YELLOW, "Client disconnected: " << client_sock);
-	close(client_sock);
-	FD_CLR(client_sock, &_read_fds);
 	_client_buffers.erase(client_sock);
+	close(client_sock);
+	FD_CLR(client_sock, &_temp_fds);
 }
 
 void Server::clientHandleMessage(int client_sock, char *buff, int bytes_read)
@@ -172,6 +158,11 @@ void Server::clientHandleMessage(int client_sock, char *buff, int bytes_read)
 std::string	Server::getPassword(void)	const
 {
 	return _password;
+}
+
+fd_set& Server::getReadFds()
+{
+	return _read_fds;
 }
 
 Client*	Server::findClient(const std::string& clientName)
@@ -193,24 +184,22 @@ void Server::removeClient(int clientFd)
 	if (it != _clients.end())
 	{
 		Client* client = it->second;
-
 		close(client->getSocketFd());
-		delete client;
 		_clients.erase(it);
-
 		PRINT_COLOR(GREEN, "Client removed from server: FD " << clientFd);
+		delete client;
 	}
 }
 
 void Server::checkChannelName(const std::string& channelName, Client* client)
 {
+	(void) client;
 	char forbiddenChars[4] = {",\x07 "};
 
 	if (channelName.empty() || \
 		std::strpbrk(channelName.c_str(), forbiddenChars) != NULL || \
 		(channelName[0] != '#' && channelName[0] != '&'))
 	{
-		client->sendMessage(handleError(476));
 		PRINT_ERROR(RED, "ERROR: Invalid channel name: " << channelName);
 		throw (479);
 	}
@@ -237,13 +226,13 @@ Channel* Server::findChannel(const std::string& channelName)
 
 int Server::isNicknameInUse(std::string nickname)
 {
-    for (std::map<int, Client*>::iterator it = this->_clients.begin(); it != this->_clients.end(); ++it)
-    {
-        if (it->second == NULL)
-            continue;
+	for (std::map<int, Client*>::iterator it = this->_clients.begin(); it != this->_clients.end(); ++it)
+	{
+		if (it->second == NULL)
+			continue;
 
-        if (it->second->getNickname() == nickname)
-            return true;
-    }
-    return false;
+		if (it->second->getNickname() == nickname)
+			return true;
+	}
+	return false;
 }

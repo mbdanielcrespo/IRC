@@ -35,6 +35,10 @@ class Channel
 		bool		isOperator(const std::string& nickname) const;
 
 		void		broadcastMessage(Client* sender, const std::string& message);
+		void		broadcastLogMessage(Client* sender, const std::string& message);
+
+		void		addInvitedUser(const std::string& nickname);
+		bool		isInvited(const std::string& nickname) const;
 		void		inviteUser(Client* inviter, Client* invited);
 		void		kick(Client* kicker, const std::string& nickname);
 
@@ -56,8 +60,12 @@ class Channel
 		void 		checkClient(Client* client);
 		void 		checkUserLimit(void);
 		void 		checkKey(const std::vector<std::string>& params);
-		void 		checkInviteOnly(void);
+		void 		checkInviteOnly( Client *client );
+		void		checkTopicRestricted( Client *client );
+
 
 		std::string listMembers() const;
 		std::string listOperators() const;
+
+
 };

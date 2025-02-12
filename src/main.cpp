@@ -58,7 +58,7 @@ std::string handleError(int errorCode)
 		case 482:
 			errorMessage = "ERR_CHANOPRIVSNEEDED: You're not a channel operator";		break;
 		case 696:
-			errorMessage = " :You must specify a parameter for the key mode.";			break;
+			errorMessage = "ERR_PARAMKEYMODE: You must specify a parameter for the key mode.";			break;
 		case 1001:
 			errorMessage = "ERR_EMPTYCMD: Command is empty";							break;
 		case 1002:
@@ -70,7 +70,13 @@ std::string handleError(int errorCode)
 		case 1005:
 			errorMessage = "ERR_NOTYOURSELF: Recipient cannot be yourself!";			break;
 		case 1006:
-			errorMessage = "Please register with PASS before using any commands.";		break;
+			errorMessage = "ERR_NOTLOGED: Please register with PASS before using any commands.";		break;
+		case 1007://todo
+			errorMessage = "ERR_ALREADYOP: User is an operator already!";				break;
+		case 1008://todo
+			errorMessage = "ERR_NONICKSET: No nick set";								break;
+		case 1009://todo
+			errorMessage = "ERR_NOUSERSET: No user set";								break;
 		default:
 			errorMessage = "Unknown error code!";
 			PRINT_ERROR(RED, errorCode);												break;
