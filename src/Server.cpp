@@ -132,9 +132,6 @@ void Server::acceptConnection()
 		
 		PRINT_COLOR(GREEN, "Client connected successfully: " << new_client_sock);
 
-		//// WHY FD_SET twice?
-
-		FD_SET(new_client_sock, &_read_fds);
 		std::string welcome = "Please provide connection password using PASS command\r\n";
 		send(new_client_sock, welcome.c_str(), welcome.length(), 0);
 	}
@@ -155,8 +152,7 @@ void Server::handleClient(int client_sock)
 
 void Server::clientDisconected(int client_sock)
 {
-	if (DEBUG == DEBUG_ON)
-		PRINT_COLOR(YELLOW, "Client disconnected: " << client_sock);
+	PRINT_COLOR(YELLOW, "Client disconnected: " << client_sock);
 	close(client_sock);
 	FD_CLR(client_sock, &_read_fds);
 	_client_buffers.erase(client_sock);
@@ -210,7 +206,9 @@ void Server::checkChannelName(const std::string& channelName, Client* client)
 {
 	char forbiddenChars[4] = {",\x07 "};
 
-	if (channelName.empty() || std::strpbrk(channelName.c_str(), forbiddenChars) != NULL || channelName[0] != '#')
+	if (channelName.empty() || \
+		std::strpbrk(channelName.c_str(), forbiddenChars) != NULL || \
+		(channelName[0] != '#' && channelName[0] != '&'))
 	{
 		client->sendMessage(handleError(476));
 		PRINT_ERROR(RED, "ERROR: Invalid channel name: " << channelName);

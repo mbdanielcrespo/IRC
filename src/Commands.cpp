@@ -265,33 +265,30 @@ void CommandHandler::handleMode(Server* server, Client* client, const std::vecto
 	{
 		flag = getSymbol(modeString[0]); //checks if the flag is valid 
 
-		switch(modeString[1]){
-			case 'i':	channel->setInviteOnly(flag);		return ;	break;
-			case 't':	channel->setTopicRestricted(flag);	return ;	break;
-			default: 													break;
-		}
+		if (modeString[1] == 'i')
+			channel->setInviteOnly(flag);
+		else if (modeString[1] == 't')
+			channel->setTopicRestricted(flag);
+		else
+		{
+			if (params.size() < 3)
+				throw (696);
 
-		if (params.size() < 3)
-			throw (696);
-
-		Client *new_op = NULL;
-		switch(modeString[1]){
-			case 'k':	channel->setKey(params[2], flag);				break;
-			case 'l':	channel->setUserLimit(params[2], flag);			break;
-			case 'o':	new_op = server->findClient(params[2]);
-						channel->checkClient(new_op);
-						if (!channel->isMember(params[2]))
-							throw(441);
-						if (flag == true)
-							channel->addOperator(new_op);
-						else
-							channel->removeOperator(params[2]);	
-						break;
-			default:	throw(472);										break;
+			Client *new_op = NULL;
+			switch(modeString[1]){
+				case 'k':	channel->setKey(params[2], flag);				break;
+				case 'l':	channel->setUserLimit(params[2], flag);			break;
+				case 'o':	new_op = server->findClient(params[2]);
+							channel->checkClient(new_op);
+							if (!channel->isMember(params[2]))
+								throw(441);
+							if (flag == true)
+								channel->addOperator(new_op);
+							else
+								channel->removeOperator(params[2]);	
+							break;
+				default:	throw(472);										break;
+			}
 		}
 	}
 }
-
-//TODO: WHO (handle)
-//TODO: SEND SERVER CORRECT MESSAGE FOR NICK FOR BEING ABLE TO JOIN CHANNELS AFTERWARDS
-//TODO: TEST MODES AND ALL OTHER COMMANDS WITH MMODES
