@@ -57,28 +57,15 @@ Server::~Server( void ){
 
 void Server::run( void )
 {
-	/*FD_ZERO(&this->fdList);
-	FD_ZERO(&this->fdWrite);
-	FD_SET(this->serverSocket, &this->fdList);
-	while (1)
-	{
-		this->fdWrite = this->fdRead = this->fdList;
-	select(this->maxFds + 1, &this->fdRead, &this->fdWrite, NULL, NULL);
-
-		if (FD_ISSET(this->serverSocket, &this->fdRead))
-			this->acceptClient();
-		else 
-			iterateClients();
-	}*/
-
 	FD_ZERO(&_read_fds);			// Init sockets
 	FD_SET(_server_fd, &_read_fds);
-	
+	//int 	max_fds = _server_fd;
+
 	while (true)
 	{
 		_temp_fds = _read_fds;
 	
-		int activity = select(_server_fd + 1, &_temp_fds, &_temp_fds, NULL, NULL);
+		int activity = select(FD_SETSIZE + 1, &_temp_fds, NULL, NULL, NULL);
 		if (activity < 0)
 		{
 			if (errno == EINTR) // Ignorar sys call interrompida
@@ -89,7 +76,7 @@ void Server::run( void )
 			throw std::runtime_error("Select failed");
 		}
 		
-		for (int i = 0; i < _server_fd; i++)
+		for (int i = 0; i < FD_SETSIZE; i++)
 		{
 			if (FD_ISSET(i, &_temp_fds))
 			{
@@ -131,14 +118,14 @@ void Server::handleClient(int client_sock)
 	int bytes_read = recv(client_sock, buff, BUFFER_SIZE, 0);
 	
 	if (bytes_read <= 0)
-		clientDisconected(client_sock);
+		clientDisconected(client_sock);	
 	else
 		clientHandleMessage(client_sock, buff, bytes_read);
 }
 
 void Server::clientDisconected(int client_sock)
 {
-	PRINT_COLOR(YELLOW, "Client disconnected: " << client_sock);
+	PRINT_COLOR(YELLOW, "Client disconnected: " << client_sock << "\nServer has now: " << _clients.size() << " clients.");
 	_client_buffers.erase(client_sock);
 	close(client_sock);
 	FD_CLR(client_sock, &_temp_fds);
