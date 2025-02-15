@@ -33,6 +33,7 @@ class Channel
 		void		addOperator(Client* client);
 		void		removeOperator(const std::string& nickname);
 		bool		isOperator(const std::string& nickname) const;
+		void		changeOperatorStatus(Client *new_op, std::string clientName, bool flag);
 
 		void		broadcastMessage(Client* sender, const std::string& message);
 		void		broadcastLogMessage(Client* sender, const std::string& message);
@@ -49,20 +50,23 @@ class Channel
 		void		setUserLimit(const std::string& limit, bool flag);
 		void 		setTopicSetter(Client *client);
 		void		setHasKey(bool flag);
+
 		std::string	getName( void ) const;
 		std::string	getTopic( void ) const;
 		size_t		getMemberCount( void ) const;
 		bool		getHasKey( void ) const;
 		int 		getMemberLimit( void ) const;
 		Client		*getTopicSetter( void ) const;
-
+		bool 		getInviteOnly( void ) const;
+		bool		getHasLimit( void ) const;
+		bool 		getTopicRestricted( void ) const;
+		
 		void 		checkOperator(Client* client);
 		void 		checkClient(Client* client);
 		void 		checkUserLimit(void);
 		void 		checkKey(const std::vector<std::string>& params);
 		void 		checkInviteOnly( Client *client );
 		void		checkTopicRestricted( Client *client );
-
 
 		std::string listMembers() const;
 		std::string listOperators() const;

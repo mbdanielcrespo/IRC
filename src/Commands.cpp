@@ -1,28 +1,22 @@
-#include <CommandHandler.hpp>
-#include <Channel.hpp>
-
+#include "Server.hpp"
 
 // DONE
-void CommandHandler::handlePass(Server* server, Client* client, const std::vector<std::string>& params) 
+void Server::handlePass(Client* client, const std::vector<std::string>& params) 
 {
 	if (params.size() < 1)
 		throw(461);
-	else if (!client->authenticate(params[0], server->getPassword()))
-		throw(451);
-	else
+
+	std::string password = this->getPassword();
+
+	if (client->authenticate(params[0], password))
 		client->sendMessage("Password authentication successfull!\nYou can now send commands to this server!\n");
+	else
+		throw(451);
 }
 
-/* TO FIX:
-
-<< NICK "	ou 		<< NICK #ASD
->> @time=2025-02-08T18:01:54.520Z :irc-5e48.darkscience.net 432 user " :Erroneous Nickname
-
-*/
-void CommandHandler::handleNick(Server* server, Client* client, const std::vector<std::string>& params)
+// TEST
+void Server::handleNick(Client* client, const std::vector<std::string>& params)
 {
-	if (!server)
-		throw(402);
 	if (!client)
 		PRINT_ERROR(RED, handleError(401));
 	if (params.size() < 1)
@@ -31,7 +25,7 @@ void CommandHandler::handleNick(Server* server, Client* client, const std::vecto
 	std::string nickname = params[0];
 	if (nickname.length() > 60 || nickname.empty())
 		throw(432);
-	if (server->isNicknameInUse(nickname))
+	if (this->isNicknameInUse(nickname))
 		throw(433);
 	client->setNickname(nickname);
 		PRINT_COLOR(GREEN,
@@ -41,9 +35,8 @@ void CommandHandler::handleNick(Server* server, Client* client, const std::vecto
 }
 
 
-void CommandHandler::handleUser(Server* server, Client* client, const std::vector<std::string>& params)
+void Server::handleUser(Client* client, const std::vector<std::string>& params)
 {
-	(void)server;
 	if (params.size() < 4)
 	{
 		PRINT_COLOR(RED, "Requires: username hostname servername realname");
@@ -58,7 +51,7 @@ void CommandHandler::handleUser(Server* server, Client* client, const std::vecto
 }
 
 // TEST
-void CommandHandler::handleJoin(Server* server, Client* client, const std::vector<std::string>& params)
+void Server::handleJoin(Client* client, const std::vector<std::string>& params)
 {
 	if (params.size() < 1)
 		throw(461);
@@ -67,10 +60,10 @@ void CommandHandler::handleJoin(Server* server, Client* client, const std::vecto
 	std::stringstream ss(params[0]);
 
 	while (std::getline(ss, channelName, ',')) {
-		server->checkChannelName(channelName, client);
-		Channel *channel = server->findChannel(channelName);
+		this->checkChannelName(channelName, client);
+		Channel *channel = this->findChannel(channelName);
 		if (channel == NULL)
-			channel = server->createChannel(channelName, client);
+			channel = this->createChannel(channelName, client);
 		channel->checkInviteOnly(client);
 		channel->checkUserLimit();
 		channel->checkKey(params);
@@ -80,82 +73,77 @@ void CommandHandler::handleJoin(Server* server, Client* client, const std::vecto
 	}
 }
 
-// DONE
-void CommandHandler::handlePart(Server* server, Client* client, const std::vector<std::string>& params)
+// NOT DONE
+void Server::handlePart(Client* client, const std::vector<std::string>& params)
 {
 	if (params.size() < 1)
 		throw(461);
-	
-	std::string channelName = params[0];
-	Channel* channel = server->findChannel(channelName);
-	checkChannel(channel);
 
-	if (!channel->isMember(client->getNickname()))
-		throw(442);
+	std::string channelName;
+	std::stringstream ss(params[0]);
 
-	client->leaveChannel(channelName);
-	channel->removeMember(client->getNickname());
+	while (std::getline(ss, channelName, ',')) {
+		Channel* channel = this->findChannel(channelName);
+		checkChannel(channel);
+
+		if (!channel->isMember(client->getNickname()))
+			throw(442);
+
+		client->leaveChannel(channelName);
+		channel->removeMember(client->getNickname());
+
+		//if the last client leaves the channel is erased.
+	}
 }
 
 // DONE
-void CommandHandler::handleKick(Server* server, Client* client, const std::vector<std::string>& params)
+void Server::handleKick(Client* client, const std::vector<std::string>& params)
 {
 	if (params.size() < 2)
 		throw(461);
 
 	std::string channelName = params[0];
 	std::string targetNickname = params[1];
-	Channel* channel = server->findChannel(channelName);
-
-	if (!channel)
-		throw(401);
+	Channel* channel = this->findChannel(channelName);
+	checkChannel(channel);
 
 	channel->kick(client, targetNickname);
 }
 
 
-void CommandHandler::handleQuit(Server* server, Client* client, const std::vector<std::string>& params)
+void Server::handleQuit(Client* client, const std::vector<std::string>& params)
 {
-    if (!server)
-		throw(402);
-	if (!client)
-		throw(401);
-
-	std::string quitMessage;
+	std::string quitMessage = "Client " + client->getNickname();
 	if (params.empty())
-	    quitMessage = "Client " + client->getNickname() + " has quit \r\n";
+		quitMessage += " has quit \r\n";
 	else
-		quitMessage = "Client " + client->getNickname() + ": " + params[0] + "\r\n";
+		quitMessage += ": " + params[0] + "\r\n";
 
-    std::map<std::string, Channel*> joinedChannels = client->getJoinedChannels();
-    for (std::map<std::string, Channel*>::iterator it = joinedChannels.begin(); it != joinedChannels.end(); ++it)
-    {
-        Channel* channel = it->second;
-        if (channel)
-		{
-            channel->broadcastMessage(client, "QUIT :" + quitMessage);
-            if (channel->isMember(client->getNickname()))
-				channel->removeMember(client->getNickname());
-        }
-    }
+	std::map<std::string, Channel*> joinedChannels = client->getJoinedChannels();
+	for (std::map<std::string, Channel*>::iterator it = joinedChannels.begin(); it != joinedChannels.end(); ++it)
+	{
+		Channel* channel = it->second;
+		channel->broadcastMessage(client, "QUIT :" + quitMessage);
+		if (channel->isMember(client->getNickname()))
+			channel->removeMember(client->getNickname());
+	}
 // estas duas linhas estavam no teu quit
 	int clientFd = client->getSocketFd();
-    FD_CLR(clientFd, &server->getReadFds());
+	FD_CLR(clientFd, &this->getReadFds());
 
-    server->removeClient(client->getSocketFd());
+	this->removeClient(client->getSocketFd());
 }
 
-void CommandHandler::handleInvite(Server* server, Client* client, const std::vector<std::string>& params)
+void Server::handleInvite(Client* client, const std::vector<std::string>& params)
 {
-	// TODO: CHECK USER LIMIT
-	if (params.size() < 2)
+	if (params.size() < 2)	// TODO: CHECK USER LIMIT
 		throw(461);
 
 	std::string targetNickname = params[0];
 	std::string channelName = params[1];
 	
-	Client* targetClient = server->findClient(targetNickname);
-	Channel* channel = server->findChannel(channelName);
+	Client* targetClient = this->findClient(targetNickname);
+	Channel* channel = this->findChannel(channelName);
 
 	channel->checkClient(targetClient);
 	checkChannel(channel);
@@ -183,7 +171,7 @@ void CommandHandler::handleInvite(Server* server, Client* client, const std::vec
 		PRINT_ERROR(RED, "INVITE Requires a targetClient && channel!");
 }
 
-void CommandHandler::handleTopic(Server* server, Client* client, const std::vector<std::string>& params)
+void Server::handleTopic(Client* client, const std::vector<std::string>& params)
 {
 	Channel		*channel;
 	std::string	topic;
@@ -191,7 +179,7 @@ void CommandHandler::handleTopic(Server* server, Client* client, const std::vect
 
 	if (params.size() == 0)
 		throw(401);
-	channel = server->findChannel(params[0]);
+	channel = this->findChannel(params[0]);
 	checkChannel(channel);
 	channel->checkTopicRestricted(client);
 	
@@ -211,21 +199,18 @@ void CommandHandler::handleTopic(Server* server, Client* client, const std::vect
 }
 
 // TODO: TEST
-void CommandHandler::handlePrivMsg(Server* server, Client* client, const std::vector<std::string>& params)
+void Server::handlePrivMsg(Client* client, const std::vector<std::string>& params)
 {
-	std::string recipient;
-	std::string message;
-
 	if (params.size() < 1)
 		throw(411);
 	if (params.size() < 2)	
 		throw(412);
 		
-	recipient = params[0];
-	message = params[1];
+	std::string recipient = params[0];
+	std::string message = params[1];
 	
-	Client* targetClient = server->findClient(recipient);
-	Channel* targetChannel = server->findChannel(recipient);
+	Client* targetClient = this->findClient(recipient);
+	Channel* targetChannel = this->findChannel(recipient);
 
 	if (targetClient == client)
 		throw(1005);
@@ -248,50 +233,42 @@ static bool getSymbol(char c)
 }
 
 // TODO: TEST
-void CommandHandler::handleMode(Server* server, Client* client, const std::vector<std::string>& params)
+void Server::handleMode(Client* client, const std::vector<std::string>& params)
 {
 	bool flag = false;
 
-	if (params.size() < 2)
-		throw(461);
-	//sendChannelModes();
+	if (params.size() == 0)
+		throw (461);
 
-	std::string target = params[0];
-	std::string modeString = params[1];
-	Channel* channel = server->findChannel(target);
+	Channel* channel = this->findChannel(params[0]);
 	checkChannel(channel);
+
+	if (params.size() == 1)
+		client->sendChannelModes(channel);
+
+	std::string modeString = params[1];
 
 	if (!channel->isOperator(client->getNickname()))
 		throw(482);
-
 	if (modeString.size() != 2)
 		throw(472);
 
 	flag = getSymbol(modeString[0]); //checks if the flag is valid 
-	if (modeString[1] == 'i')
-		channel->setInviteOnly(flag);
-	else if (modeString[1] == 't')
-		channel->setTopicRestricted(flag);
-	else
+	switch(modeString[1])
 	{
-		if (params.size() < 3)
-			throw (696);
+		case 'i':	channel->setInviteOnly(flag);						break;
+		case 't':	channel->setTopicRestricted(flag);					break;
+		default: 
+			if (params.size() < 3)
+				throw (696);
 
-		Client *new_op = NULL;
-		switch(modeString[1])
-		{
-			case 'k':	channel->setKey(params[2], flag);				break;
-			case 'l':	channel->setUserLimit(params[2], flag);			break;
-			case 'o':	new_op = server->findClient(params[2]);
-						channel->checkClient(new_op);
-						if (!channel->isMember(params[2]))
-							throw(441);
-						if (flag == true)
-							channel->addOperator(new_op);
-						else
-							channel->removeOperator(params[2]);
-						break;
-			default:	throw(472);										break;
-		}
+			switch(modeString[1])
+			{
+				case 'k':	channel->setKey(params[2], flag);										break;
+				case 'l':	channel->setUserLimit(params[2], flag);									break;
+				case 'o':	channel->changeOperatorStatus(this->findClient(params[2]), params[2], flag);		break;
+				default:	throw(472);																break;
+			}
+			break;
 	}
 }

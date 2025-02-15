@@ -49,6 +49,21 @@ Server::Server(int port, const std::string &password) : _password(password)
 	char portString[6];
 	sprintf(portString, "%d", port);
 	PRINT_COLOR(CYAN, "IRC Server listening on port: " + (std::string)portString);
+
+	this->commands["JOIN"]		= &Server::handleJoin;
+	this->commands["PRIVMSG"]	= &Server::handlePrivMsg;
+	this->commands["PART"]		= &Server::handlePart;
+	this->commands["QUIT"]		= &Server::handleQuit;
+	this->commands["KICK"]		= &Server::handleKick;
+	this->commands["INVITE"]	= &Server::handleInvite;
+	this->commands["TOPIC"]		= &Server::handleTopic;
+	this->commands["MODE"]		= &Server::handleMode;
+	this->commands["NICK"]		= &Server::handleNick;
+	this->commands["USER"]		= &Server::handleUser;
+
+	this->authCommands["PASS"]	= &Server::handlePass;
+	this->authCommands["NICK"]	= &Server::handleNick;
+	this->authCommands["USER"]	= &Server::handleUser;
 }
 
 Server::~Server( void ){
@@ -136,10 +151,30 @@ void Server::clientHandleMessage(int client_sock, char *buff, int bytes_read)
 	buff[bytes_read] = '\0';
 
 	Client* client = _clients[client_sock];
-	if (client->isAuthenticated())
-		CommandHandler::processCommand(this, client, std::string(buff));
-	else
-		CommandHandler::processAuth(this, client, std::string(buff));
+	//checkCLient?
+	//PRINT_COLOR(YELLOW, this->getPassword());
+
+	if (std::strlen(buff) < 1)
+		throw(1001);
+	std::string command;
+	std::stringstream ss(buff);
+
+	while (std::getline(ss, command, '\n')) {
+		PRINT_COLOR(B_RED, command);
+		try
+		{
+			CommandHandler cmd(command);
+
+			if (client->isAuthenticated())
+				cmd.processCommand(this, client, this->commands, 421);
+			else
+				cmd.processAuth(this, client);
+		}
+		catch(int err)
+		{
+			client->sendMessage(handleError(err));
+		}
+	}
 }
 
 std::string	Server::getPassword(void)	const
@@ -147,7 +182,7 @@ std::string	Server::getPassword(void)	const
 	return _password;
 }
 
-fd_set& Server::getReadFds()
+fd_set& Server::getReadFds(void)	//const 	(pqeq esta nao pode ser const)
 {
 	return _read_fds;
 }
@@ -223,3 +258,10 @@ int Server::isNicknameInUse(std::string nickname)
 	}
 	return false;
 }
+
+void Server::checkChannel(Channel *channel)
+{
+	if (channel == NULL)
+		throw (403);
+}
+

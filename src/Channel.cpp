@@ -289,14 +289,44 @@ bool Channel::getHasKey() const
 	return _hasKey;
 }
 
+bool Channel::getInviteOnly() const
+{
+	return _inviteOnly;
+}
+
 int Channel::getMemberLimit() const
 {
 	return _userLimit;
 }
 
+bool Channel::getHasLimit() const
+{
+	if (_userLimit != (size_t)-1)
+		return true;
+	return false;
+}
+
+bool Channel::getTopicRestricted() const
+{
+	return _topicRestricted;
+}
+
+
 Client*	Channel::getTopicSetter() const
 {
 	return _topicSetter;
+}
+
+void	Channel::changeOperatorStatus(Client *new_op, std::string clientName, bool flag)
+{
+	this->checkClient(new_op);
+	if (!this->isMember(clientName))
+		throw(441);
+
+	if (flag == true)
+		this->addOperator(new_op);
+	else
+		this->removeOperator(clientName);
 }
 
 std::string Channel::listMembers() const

@@ -108,8 +108,7 @@ int main(int argc, char **argv)
 	}
 	
 	try{
-		std::string password = argv[2];
-		Server server(port, password);
+		Server server(port, argv[2]);
 		server.run();
 	}
 	catch (std::runtime_error &e){
@@ -119,3 +118,17 @@ int main(int argc, char **argv)
 
 	return EXIT_SUCCESS;
 }
+
+/*
+segfault (que so aparece com o valgrind) no pass:
+	- quando se use getPassword() no main, tudo corre bem
+	- mas ao usar no Server.cpp, ou em qqer outro sitio da segfault, n sei pq
+
+quit NAO esta a funcionar, a msg a amarelo devia aparecer
+
+nos sendMessage "\r\n" duas vezes??
+no privmsg nao faltam checkclient e check channel?
+
+@time=2025-02-08T18:01:54.520Z :irc-5e48.darkscience.net 432 user " :Erroneous Nickname
+
+*/

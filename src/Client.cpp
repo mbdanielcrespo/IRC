@@ -202,3 +202,19 @@ bool Client::isAuthenticated() const
 {
 	return _isAuthenticated;
 }
+
+void Client::sendChannelModes(Channel *channel)
+{
+	std::string modeString = "+";
+
+	if (channel->getHasKey())
+		modeString += "k";
+	if (channel->getHasLimit())
+		modeString += "l";
+	if (channel->getInviteOnly())
+		modeString += "i";
+	if (channel->getTopicRestricted())
+		modeString += "t";
+
+	this->sendMessage("324 " + _username + " " + channel->getName() + " " + modeString);
+}

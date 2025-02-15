@@ -54,11 +54,11 @@ class Client
 		void	leaveChannel(const std::string& channel_name);
 		bool	isInChannel(const std::string& channel_name) const;
 		void	setChannelOperatorStatus(const std::string& channel_name, bool is_op);
+		void	sendChannelModes(Channel *channel);
 
 		// Messaging methods
 		void	sendMessage(const std::string& message);
 		void	sendPrivateMessage(Client* recipient, const std::string& message);
-
 		// Getters
 		std::string	getNickname() const;
 		std::string	getUsername() const;
