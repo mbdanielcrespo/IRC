@@ -250,7 +250,7 @@ void Channel::setUserLimit(const std::string& limit, bool flag)
 	if (flag == true)
 	{
 		int num_limit = std::atoi(limit.c_str());
-		if (_userLimit < 0 && static_cast<int>(_userLimit) != -1)
+		if (num_limit < 0 && static_cast<int>(num_limit) != -1)
 			throw (1012);
 		_userLimit = num_limit;
 		PRINT_COLOR(BLUE, "Channel USERLIMIT set to: " + limit);

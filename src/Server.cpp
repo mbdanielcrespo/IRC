@@ -72,38 +72,43 @@ Server::~Server( void ){
 	close(_server_fd);
 }
 
-void Server::run( void )
+void Server::run(void)
 {
+	// Initialize the main FD set and add our listening socket
 	FD_ZERO(&_read_fds);
 	FD_SET(_server_fd, &_read_fds);
 
 	while (true)
 	{
 		_temp_fds = _read_fds;
-	
-		int activity = select(FD_SETSIZE + 1, &_temp_fds, NULL, NULL, NULL);
+
+		int activity = select(FD_SETSIZE, &_temp_fds, NULL, NULL, NULL);
 		if (activity < 0)
 		{
 			if (errno == EINTR)
+				continue;
+			else if (errno == EBADF)
 			{
-				PRINT_ERROR(RED, "System call interrupted");
+				
 				continue;
 			}
-			throw std::runtime_error("Select failed");
+			throw(std::runtime_error("Select failed!"));
+			break;
 		}
-		
-		for (int i = 0; i < FD_SETSIZE; i++)
+
+		for (int fd = 0; fd < FD_SETSIZE; fd++)
 		{
-			if (FD_ISSET(i, &_temp_fds))
+			if (FD_ISSET(fd, &_temp_fds))
 			{
-				if (i == _server_fd)
-					this->acceptConnection();
+				if (fd == _server_fd)
+					acceptConnection();
 				else
-					this->handleClient(i);
+					handleClient(fd);
 			}
 		}
 	}
 }
+
 
 void Server::acceptConnection()
 {
@@ -134,7 +139,7 @@ void Server::handleClient(int client_sock)
 	int bytes_read = recv(client_sock, buff, BUFFER_SIZE, 0);
 	if (bytes_read >= BUFFER_SIZE)
 	{
-    	std::cerr << "Error: Buffer overflow risk!" << std::endl;
+		std::cerr << "Error: Buffer overflow risk!" << std::endl;
    		return;
 	}
 	
