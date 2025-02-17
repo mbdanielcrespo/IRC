@@ -18,8 +18,10 @@
 # define B_CYAN         "\033[1m\033[36m"
 # define B_WHITE        "\033[1m\033[37m"
 
-
+#ifndef DEBUG
 # define DEBUG          1
+#endif
+
 # define DEBUG_ON       1
 # define DEBUG_OFF      0
 

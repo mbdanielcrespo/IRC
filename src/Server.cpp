@@ -137,10 +137,11 @@ void Server::handleClient(int client_sock)
 {
 	char buff[BUFFER_SIZE];
 	int bytes_read = recv(client_sock, buff, BUFFER_SIZE, 0);
+
 	if (bytes_read >= BUFFER_SIZE)
 	{
-		std::cerr << "Error: Buffer overflow risk!" << std::endl;
-   		return;
+		PRINT_ERROR (RED, "Error: Buffer overflow risk!");
+		return ;
 	}
 	
 	if (bytes_read <= 0)
@@ -171,7 +172,7 @@ void Server::clientHandleMessage(int client_sock, char *buff, int bytes_read)
 	std::stringstream ss(buff);
 
 	while (std::getline(ss, command, '\n')) {
-		PRINT_COLOR(B_RED, command);
+		PRINT_COLOR(B_GREEN, command);
 		try
 		{
 			CommandHandler cmd(command);
