@@ -37,12 +37,7 @@ void CommandHandler::processAuth(Server* server, Client* client)
 	processCommand(server, client, server->authCommands, 1006);
 }
 
-/*
-According to the IRC protocol (both IRCv2 and IRCv3), commands like PASS, NICK, and USER 
-are registration commands and are not allowed to be used after a client has successfully 
-authenticated. Once a client has completed the registration process, these commands are 
-ignored or result in an error message from the server.
-*/
+
 void CommandHandler::processCommand(Server* server, Client* client, CommandMap map, int errorNum)
 {
 	commandIt it = map.find(_command);

@@ -1,20 +1,15 @@
 #include "Server.hpp"
 
-// DONE
 void Server::handlePass(Client* client, const std::vector<std::string>& params) 
 {
 	if (params.size() < 1)
 		throw(461);
-
-	std::string password = this->getPassword();
-
-	if (client->authenticate(params[0], password))
+	if (client->authenticate(params[0], _pass))
 		client->sendMessage("Password authentication successfull!\nYou can now send commands to this server!\n");
 	else
 		throw(451);
 }
 
-// TEST
 void Server::handleNick(Client* client, const std::vector<std::string>& params)
 {
 	if (!client)
@@ -34,7 +29,6 @@ void Server::handleNick(Client* client, const std::vector<std::string>& params)
 	);
 }
 
-
 void Server::handleUser(Client* client, const std::vector<std::string>& params)
 {
 	if (params.size() < 4)
@@ -50,7 +44,6 @@ void Server::handleUser(Client* client, const std::vector<std::string>& params)
 	);
 }
 
-// TEST
 void Server::handleJoin(Client* client, const std::vector<std::string>& params)
 {
 	if (params.size() < 1)
@@ -73,7 +66,6 @@ void Server::handleJoin(Client* client, const std::vector<std::string>& params)
 	}
 }
 
-// NOT DONE
 void Server::handlePart(Client* client, const std::vector<std::string>& params)
 {
 	if (params.size() < 1)
@@ -92,11 +84,10 @@ void Server::handlePart(Client* client, const std::vector<std::string>& params)
 		client->leaveChannel(channelName);
 		channel->removeMember(client->getNickname());
 
-		//if the last client leaves the channel is erased.
+		//TODO: if the last client leaves the channel is erased?
 	}
 }
 
-// DONE
 void Server::handleKick(Client* client, const std::vector<std::string>& params)
 {
 	if (params.size() < 2)
@@ -127,16 +118,13 @@ void Server::handleQuit(Client* client, const std::vector<std::string>& params)
 		if (channel->isMember(client->getNickname()))
 			channel->removeMember(client->getNickname());
 	}
-// estas duas linhas estavam no teu quit
-	int clientFd = client->getSocketFd();
-	FD_CLR(clientFd, &this->getReadFds());
-
+	
 	this->removeClient(client->getSocketFd());
 }
 
 void Server::handleInvite(Client* client, const std::vector<std::string>& params)
 {
-	if (params.size() < 2)	// TODO: CHECK USER LIMIT
+	if (params.size() < 2)
 		throw(461);
 
 	std::string targetNickname = params[0];
@@ -156,16 +144,8 @@ void Server::handleInvite(Client* client, const std::vector<std::string>& params
 
 	if (targetClient && channel)
 	{
-		try
-		{
-			channel->inviteUser(client, targetClient);
-			if (DEBUG == DEBUG_ON)
-				PRINT_COLOR(CYAN, "Invited " + targetClient->getNickname() + " successfully!");
-		}
-		catch (const std::exception& e)
-		{
-			client->sendMessage(std::string("ERROR: ") + e.what());
-		}
+		channel->inviteUser(client, targetClient);
+		PRINT_COLOR(CYAN, "Invited " + targetClient->getNickname() + " successfully!");
 	}
 	else
 		PRINT_ERROR(RED, "INVITE Requires a targetClient && channel!");
@@ -198,7 +178,6 @@ void Server::handleTopic(Client* client, const std::vector<std::string>& params)
 	}
 }
 
-// TODO: TEST
 void Server::handlePrivMsg(Client* client, const std::vector<std::string>& params)
 {
 	if (params.size() < 1)
@@ -232,7 +211,6 @@ static bool getSymbol(char c)
 	return (false);
 }
 
-// TODO: TEST
 void Server::handleMode(Client* client, const std::vector<std::string>& params)
 {
 	bool flag = false;
@@ -253,7 +231,7 @@ void Server::handleMode(Client* client, const std::vector<std::string>& params)
 	if (modeString.size() != 2)
 		throw(472);
 
-	flag = getSymbol(modeString[0]); //checks if the flag is valid 
+	flag = getSymbol(modeString[0]); //TODO: checks if the flag is valid 
 	switch(modeString[1])
 	{
 		case 'i':	channel->setInviteOnly(flag);						break;

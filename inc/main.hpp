@@ -27,8 +27,8 @@
     #define PRINT_COLOR(color, text) (std::cout << color << text << RESET << std::endl)
     #define PRINT_ERROR(color, text) (std::cerr << color << text << RESET << std::endl)
 #else
-    #define PRINT_COLOR(color, text) ((void)0)  // No-op in release mode
-    #define PRINT_ERROR(color, text) ((void)0)  // No-op in release mode
+    #define PRINT_COLOR(color, text) ((void)0)
+    #define PRINT_ERROR(color, text) ((void)0)
 #endif
 
 # define EXIT_FAILIURE  1

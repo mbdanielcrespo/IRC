@@ -18,7 +18,7 @@ std::string handleError(int errorCode)
 		case 407:
 			errorMessage = "ERR_TOOMANYTARGETS: Too many recipients";					break;
 		case 411:
-			errorMessage = "ERR_NORECIPIENT: No recipient given";						break;
+			errorMessage = "ERR_NORECIPIENT: No valid recipient given";					break;
 		case 412:
 			errorMessage = "ERR_NOTEXTTOSEND: No text to send";							break;
 		case 421:
@@ -71,18 +71,26 @@ std::string handleError(int errorCode)
 			errorMessage = "ERR_NOTYOURSELF: Recipient cannot be yourself!";			break;
 		case 1006:
 			errorMessage = "ERR_NOTLOGED: Please register with PASS before using any commands.";		break;
-		case 1007://todo
+		case 1007:
 			errorMessage = "ERR_ALREADYOP: User is an operator already!";				break;
-		case 1008://todo
+		case 1008:
 			errorMessage = "ERR_NONICKSET: No nick set";								break;
-		case 1009://todo
+		case 1009:
 			errorMessage = "ERR_NOUSERSET: No user set";								break;
+		case 1010:
+			errorMessage = "ERR_BUFF: Buffer size too big";								break;
+		case 1011:
+			errorMessage = "ERR_ONLY_MEMBOP: Only channel members can be operators";	break;
+		case 1012:
+			errorMessage = "ERR_NEGATIVE_USERLIM: User limit must be positive";			break;
 		default:
 			errorMessage = "Unknown error code!";
 			PRINT_ERROR(RED, errorCode);												break;
 	}
 	return (errorMessage + "\n");
 }
+
+std::string Server::_pass = "";
 
 int main(int argc, char **argv)
 {
@@ -121,13 +129,15 @@ int main(int argc, char **argv)
 
 /*
 segfault (que so aparece com o valgrind) no pass:
-	- quando se use getPassword() no main, tudo corre bem
-	- mas ao usar no Server.cpp, ou em qqer outro sitio da segfault, n sei pq
+	- quando se use getword() no main, tudo corre bem								FIX
+	- mas ao usar no Server.cpp, ou em qqer outro sitio da segfault, n sei pq		FIX
 
-quit NAO esta a funcionar, a msg a amarelo devia aparecer
 
-nos sendMessage "\r\n" duas vezes??
-no privmsg nao faltam checkclient e check channel?
+
+quit NAO esta a funcionar, a msg a amarelo devia aparecer	// qual?				FIX
+
+nos sendMessage "\r\n" duas vezes??							// no problem
+no privmsg nao faltam checkclient e check channel?			// NOPE o check e feito no fim para ver se vai para um canal ou cliente
 
 @time=2025-02-08T18:01:54.520Z :irc-5e48.darkscience.net 432 user " :Erroneous Nickname
 

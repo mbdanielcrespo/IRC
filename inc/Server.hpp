@@ -28,7 +28,7 @@ class Server
 	private:
 		int										_server_fd;
 		fd_set									_read_fds, _temp_fds;
-		std::string								_password;
+		static std::string						_pass;
 		struct sockaddr_in						_server_addr;
 		std::map<int, Client*> 					_clients;
 		std::map<int, std::string>				_client_buffers;
@@ -38,7 +38,7 @@ class Server
 		std::map< std::string, void(Server::*)(Client* client, const std::vector<std::string>& params) > commands;
 		std::map< std::string, void(Server::*)(Client* client, const std::vector<std::string>& params) > authCommands;
 
-		Server(int port, const std::string &passw);
+		Server(int port, const std::string& passw);
 		~Server(void);
 
 	void		run(void);
@@ -47,7 +47,7 @@ class Server
 	void		clientDisconected(int client_sock);
 	void		clientHandleMessage(int client_sock, char *buff, int bytes_read);
 
-	std::string	getPassword(void)	const;
+	const std::string&	getPass(void) const;
 	fd_set&		getReadFds(void);
 
 	Client*		findClient(const std::string& clientName);
@@ -58,6 +58,7 @@ class Server
 	Channel*	createChannel(const std::string& channelName, Client* client);
 	int 		isNicknameInUse(std::string);
 	void		checkChannel(Channel *channel);
+	void		checkClient(Client *client);
 
 	void		handlePass(Client* client, const std::vector<std::string>& params);
 	void		handleNick(Client* client, const std::vector<std::string>& params);

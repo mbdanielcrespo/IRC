@@ -5,7 +5,6 @@ Client::Client(int socket_fd) :
 	_username(""),
 	_hostname(""),
 	_id(""),
-	//_realname(""),
 	_socketFd(socket_fd),
 	_hasNickname(false),
 	_hasUsername(false),
@@ -112,10 +111,7 @@ void Client::sendPrivateMessage(Client* recipient, const std::string& message)
 	if (recipient != NULL && !message.empty())
 		recipient->sendMessage("Private Message recived: " + message + "\r\n");
 	else
-	{
-		if (DEBUG == DEBUG_ON)
-			PRINT_ERROR(RED, "ERROR: Something went wrong when sending private message! \r\n");
-	}
+		PRINT_ERROR(RED, "ERROR: Something went wrong when sending private message! \r\n");
 }
 
 void Client::setNickname(const std::string& nickname)

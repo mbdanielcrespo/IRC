@@ -2,7 +2,7 @@
 
 static int	setSocket(void)
 {
-	int server_fd = socket(PF_INET, SOCK_STREAM, 0);    //PF_NET = IPv4 ou IPv6; SOCK_STREAM 0 = TCP;
+	int server_fd = socket(PF_INET, SOCK_STREAM, 0);
 	if (server_fd < -1)
 		throw std::runtime_error("Failed to create socket");
 	return (server_fd);
@@ -10,14 +10,14 @@ static int	setSocket(void)
 
 static void	setNonBlocking(int sock)
 {
-	if (fcntl(sock, F_SETFL, O_NONBLOCK) == -1)   // accept, recv, or send infinite wait on blocking mode FLAGS***
+	if (fcntl(sock, F_SETFL, O_NONBLOCK) == -1)
 		throw std::runtime_error("Failed to set non-blocking");
 }
 
 static void	setOpts(int sock)
 {
 	int opt = 1;
-	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) // Port can be reused, when testing is good so it doesnt reopen
+	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
 		throw std::runtime_error("Failed to set socket options");
 }
 
@@ -38,8 +38,9 @@ static void setListen(int sock)
 		throw std::runtime_error("Failed to listen");
 }
 
-Server::Server(int port, const std::string &password) : _password(password)
+Server::Server(int port, const std::string& password)
 {
+	_pass = password;
 	_server_fd = setSocket();
 	setNonBlocking(_server_fd);
 	setOpts(_server_fd);
@@ -47,7 +48,7 @@ Server::Server(int port, const std::string &password) : _password(password)
 	setListen(_server_fd);
 
 	char portString[6];
-	sprintf(portString, "%d", port);
+	snprintf(portString, sizeof(portString) , "%d", port);
 	PRINT_COLOR(CYAN, "IRC Server listening on port: " + (std::string)portString);
 
 	this->commands["JOIN"]		= &Server::handleJoin;
@@ -64,6 +65,7 @@ Server::Server(int port, const std::string &password) : _password(password)
 	this->authCommands["PASS"]	= &Server::handlePass;
 	this->authCommands["NICK"]	= &Server::handleNick;
 	this->authCommands["USER"]	= &Server::handleUser;
+	this->authCommands["QUIT"]	= &Server::handleQuit;
 }
 
 Server::~Server( void ){
@@ -72,9 +74,8 @@ Server::~Server( void ){
 
 void Server::run( void )
 {
-	FD_ZERO(&_read_fds);			// Init sockets
+	FD_ZERO(&_read_fds);
 	FD_SET(_server_fd, &_read_fds);
-	//int 	max_fds = _server_fd;
 
 	while (true)
 	{
@@ -83,7 +84,7 @@ void Server::run( void )
 		int activity = select(FD_SETSIZE + 1, &_temp_fds, NULL, NULL, NULL);
 		if (activity < 0)
 		{
-			if (errno == EINTR) // Ignorar sys call interrompida
+			if (errno == EINTR)
 			{
 				PRINT_ERROR(RED, "System call interrupted");
 				continue;
@@ -96,9 +97,9 @@ void Server::run( void )
 			if (FD_ISSET(i, &_temp_fds))
 			{
 				if (i == _server_fd)
-					this->acceptConnection();	// New client
+					this->acceptConnection();
 				else
-					this->handleClient(i);		// Existing client
+					this->handleClient(i);
 			}
 		}
 	}
@@ -131,6 +132,11 @@ void Server::handleClient(int client_sock)
 {
 	char buff[BUFFER_SIZE];
 	int bytes_read = recv(client_sock, buff, BUFFER_SIZE, 0);
+	if (bytes_read >= BUFFER_SIZE)
+	{
+    	std::cerr << "Error: Buffer overflow risk!" << std::endl;
+   		return;
+	}
 	
 	if (bytes_read <= 0)
 		clientDisconected(client_sock);	
@@ -148,12 +154,12 @@ void Server::clientDisconected(int client_sock)
 
 void Server::clientHandleMessage(int client_sock, char *buff, int bytes_read)
 {
+	if (bytes_read >= BUFFER_SIZE)
+		throw(1010);
 	buff[bytes_read] = '\0';
 
 	Client* client = _clients[client_sock];
-	//checkCLient?
-	//PRINT_COLOR(YELLOW, this->getPassword());
-
+	checkClient(client);
 	if (std::strlen(buff) < 1)
 		throw(1001);
 	std::string command;
@@ -177,12 +183,12 @@ void Server::clientHandleMessage(int client_sock, char *buff, int bytes_read)
 	}
 }
 
-std::string	Server::getPassword(void)	const
+const std::string&	Server::getPass(void) const
 {
-	return _password;
+	return _pass;
 }
 
-fd_set& Server::getReadFds(void)	//const 	(pqeq esta nao pode ser const)
+fd_set& Server::getReadFds(void)
 {
 	return _read_fds;
 }
@@ -209,6 +215,7 @@ void Server::removeClient(int clientFd)
 		close(client->getSocketFd());
 		_clients.erase(it);
 		PRINT_COLOR(GREEN, "Client removed from server: FD " << clientFd);
+		FD_CLR(client->getSocketFd(), &this->getReadFds());
 		delete client;
 	}
 }
@@ -235,14 +242,14 @@ Channel* Server::createChannel(const std::string& channelName, Client* client)
 	this->_channels[channelName] = new_channel;
 	
 	PRINT_COLOR(CYAN, "Server: Channel " << channelName << " created by " << client->getUsername() << "!");
-	return new_channel; // CREATE CHANNEL IF IT DOESN'T EXIST
+	return new_channel;
 }
 
 Channel* Server::findChannel(const std::string& channelName)
 {
 	std::map<std::string, Channel*>::iterator it = this->_channels.find(channelName);
 	if (it != _channels.end())
-		return it->second; // RETURN CHANNEL IF EXISTS
+		return it->second;
 	return NULL;
 }
 
@@ -265,3 +272,8 @@ void Server::checkChannel(Channel *channel)
 		throw (403);
 }
 
+void Server::checkClient(Client *client)
+{
+	if (client == NULL)
+		throw (1002);
+}
