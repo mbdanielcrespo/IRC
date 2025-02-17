@@ -201,16 +201,16 @@ bool Client::isAuthenticated() const
 
 void Client::sendChannelModes(Channel *channel)
 {
-	std::string modeString = "+";
+	std::string modeString = "";
 
 	if (channel->getHasKey())
-		modeString += "k";
+		modeString += "+k";
 	if (channel->getHasLimit())
-		modeString += "l";
+		modeString += "+l";
 	if (channel->getInviteOnly())
-		modeString += "i";
+		modeString += "+i";
 	if (channel->getTopicRestricted())
-		modeString += "t";
+		modeString += "+t";
 
-	this->sendMessage("324 " + _username + " " + channel->getName() + " " + modeString);
+	this->sendMessage(":ircserv 324 " + _username + " " + channel->getName() + " " + modeString + "\r\n");
 }

@@ -215,22 +215,23 @@ void Server::handleMode(Client* client, const std::vector<std::string>& params)
 {
 	bool flag = false;
 
-	if (params.size() == 0)
+	if (params.size() == 0 && params.size() == 1)
 		throw (461);
 
 	Channel* channel = this->findChannel(params[0]);
 	checkChannel(channel);
 
 	if (params.size() == 1)
+	{
 		client->sendChannelModes(channel);
+		return;
+	}
 
 	std::string modeString = params[1];
-
 	if (!channel->isOperator(client->getNickname()))
 		throw(482);
 	if (modeString.size() != 2)
 		throw(472);
-
 	flag = getSymbol(modeString[0]); //TODO: checks if the flag is valid 
 	switch(modeString[1])
 	{
