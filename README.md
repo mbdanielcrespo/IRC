@@ -180,7 +180,7 @@ My implementation focuses on correctness, performance, and maintainability:
   | Final Score | 100/100 |
   | Lines of Code | ~3000 |
   | Classes | 5 core classes |
-  | Commands Implemented | 20+ IRC commands |
+  | Commands Implemented | 5+ IRC commands |
   | Completion Time | 4 weeks |
   
 </div>
